@@ -9,7 +9,7 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Plus, Home, Loader2, ListFilter } from "lucide-react";
+import { Plus, Home, Loader2 } from "lucide-react";
 import PostCard from "@/components/PostCard";
 import { useToast } from "@/components/ui/use-toast";
 import { AuthContext } from "@/context/AuthContext";
@@ -86,53 +86,71 @@ const DenPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/">
-              <Home className="h-4 w-4" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink className="font-semibold">d/{den.title}</BreadcrumbLink>
-        </BreadcrumbItem>
-      </Breadcrumb>
+      <div className="bg-card shadow-sm rounded-lg p-4 mb-6">
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">
+                <Home className="h-4 w-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink className="font-semibold">d/{den.title}</BreadcrumbLink>
+          </BreadcrumbItem>
+        </Breadcrumb>
+      </div>
 
-      <div className="bg-card shadow-sm rounded-lg p-6 mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">{den.title}</h1>
-            {den.description && <p className="text-muted-foreground mt-1">{den.description}</p>}
+      <div className="bg-card shadow-sm rounded-lg overflow-hidden mb-8">
+        {den.imageUrl && (
+          <div className="w-full h-48 overflow-hidden">
+            <img 
+              src={den.imageUrl}
+              alt={den.title}
+              className="w-full h-full object-cover"
+            />
           </div>
-          
-          {isAuthenticated && (
-            <Button 
-              onClick={() => navigate(`/create-post/${denId}`)}
-              className="bg-den hover:bg-den-accent whitespace-nowrap"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Post
-            </Button>
-          )}
+        )}
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold">d/{den.title}</h1>
+              {den.description && <p className="text-muted-foreground mt-1">{den.description}</p>}
+            </div>
+            
+            {isAuthenticated && (
+              <Button 
+                onClick={() => navigate(`/create-post/${denId}`)}
+                className="bg-den hover:bg-den-accent whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Post
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
 
+      <div className="bg-card shadow-sm rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-6">Posts</h2>
         <div className="divide-y">
           {isLoadingPosts ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : posts.length > 0 ? (
-            posts.map((post) => (
-              <div key={post.id} className="py-4 first:pt-0 last:pb-0">
-                <PostCard 
-                  post={post}
-                  denCreatorId={den.creatorId}
-                  onDelete={() => handleDeletePost(post.id)}
-                />
-              </div>
-            ))
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <div key={post.id} className="py-4 first:pt-0 last:pb-0">
+                  <PostCard 
+                    post={post}
+                    denCreatorId={den.creatorId}
+                    onDelete={() => handleDeletePost(post.id)}
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">No posts in this den yet.</p>

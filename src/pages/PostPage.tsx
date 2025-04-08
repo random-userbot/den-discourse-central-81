@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useContext } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { postService, commentService } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import { AuthContext } from "@/context/AuthContext";
 
 const PostPage = () => {
   const { postId } = useParams<{ postId: string }>();
+  const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [commentReplies, setCommentReplies] = useState<{ [key: number]: any[] }>({});
@@ -176,9 +177,9 @@ const PostPage = () => {
   const handleDeletePost = () => {
     // Navigate back to the den page
     if (post?.denId) {
-      window.location.href = `/den/${post.denId}`;
+      navigate(`/den/${post.denId}`);
     } else {
-      window.location.href = '/';
+      navigate('/');
     }
   };
 
@@ -204,33 +205,30 @@ const PostPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/">
-              <Home className="h-4 w-4" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to={`/den/${post.denId}`}>d/{post.denTitle}</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink className="font-semibold truncate max-w-[200px]" title={post.title}>
-            {post.title}
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-      </Breadcrumb>
+      <div className="bg-card shadow-sm rounded-lg p-4 mb-6">
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">
+                <Home className="h-4 w-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/den/${post.denId}`}>d/{post.denTitle}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        </Breadcrumb>
+      </div>
 
       <div className="mb-6">
         <PostCard 
           post={post} 
           showDenInfo={true} 
           onDelete={handleDeletePost}
+          denCreatorId={post.denCreatorId}
         />
       </div>
 
@@ -280,34 +278,6 @@ const PostPage = () => {
                   onDelete={() => handleDeleteComment(comment.id)}
                   onReplySubmit={handleReplySubmit}
                 />
-                
-                {comment.hasReplies && (
-                  <div className="ml-6 mt-2">
-                    {commentReplies[comment.id] ? (
-                      <div className="space-y-2">
-                        {commentReplies[comment.id].map((reply) => (
-                          <CommentCard
-                            key={reply.id}
-                            comment={reply}
-                            denCreatorId={post.denCreatorId}
-                            onDelete={() => handleDeleteReply(comment.id, reply.id)}
-                            onReplySubmit={handleReplySubmit}
-                            depth={1}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fetchReplies(comment.id)}
-                        className="text-xs"
-                      >
-                        Show replies
-                      </Button>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>

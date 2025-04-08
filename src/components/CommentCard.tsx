@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, ArrowDown, MessageSquare, Trash2, X } from "lucide-react";
+import { ArrowUp, ArrowDown, MessageSquare, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { commentService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import {
@@ -35,7 +35,7 @@ interface CommentCardProps {
   };
   denCreatorId?: number;
   onDelete?: () => void;
-  onReplySubmit?: (commentData: { content: string; postId: number; parentCommentId?: number }) => void;
+  onReplySubmit?: (commentData: { content: string; postId: number; parentCommentId?: number }) => Promise<any>;
   depth?: number;
 }
 
@@ -54,6 +54,9 @@ const CommentCard = ({
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [replies, setReplies] = useState<any[]>([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
   
   const canDelete = user && (user.id === comment.userId || user.id === denCreatorId);
   
@@ -76,10 +79,20 @@ const CommentCard = ({
       const response = await commentService.voteComment(comment.id, upvote);
       // Update with actual count from server
       setCurrentVoteCount(response.data.voteCount);
+      
+      toast({
+        title: "Vote recorded",
+        description: upvote ? "Comment upvoted successfully" : "Comment downvoted successfully",
+      });
     } catch (error) {
       // Revert on error
       setCurrentVoteCount(comment.voteCount);
       console.error("Error voting:", error);
+      toast({
+        title: "Error",
+        description: "Failed to register your vote",
+        variant: "destructive",
+      });
     } finally {
       setIsVoting(false);
     }
@@ -98,6 +111,11 @@ const CommentCard = ({
       if (onDelete) onDelete();
     } catch (error) {
       console.error("Error deleting comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete comment",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -117,18 +135,20 @@ const CommentCard = ({
     try {
       setIsSubmittingReply(true);
       
+      const commentData = {
+        content: replyContent,
+        postId: comment.postId,
+        parentCommentId: comment.id,
+      };
+      
       if (onReplySubmit) {
-        onReplySubmit({
-          content: replyContent,
-          postId: comment.postId,
-          parentCommentId: comment.id,
-        });
+        const newReply = await onReplySubmit(commentData);
+        setReplies(prev => [newReply, ...prev]);
+        if (!showReplies) setShowReplies(true);
       } else {
-        await commentService.createComment({
-          content: replyContent,
-          postId: comment.postId,
-          parentCommentId: comment.id,
-        });
+        const response = await commentService.createComment(commentData);
+        setReplies(prev => [response.data, ...prev]);
+        if (!showReplies) setShowReplies(true);
       }
       
       setReplyContent("");
@@ -140,9 +160,46 @@ const CommentCard = ({
       });
     } catch (error) {
       console.error("Error submitting reply:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit reply",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingReply(false);
     }
+  };
+  
+  const fetchReplies = async () => {
+    if (loadingReplies) return;
+    
+    try {
+      setLoadingReplies(true);
+      const response = await commentService.getReplies(comment.id);
+      setReplies(response.data);
+      setShowReplies(true);
+    } catch (error) {
+      console.error("Error fetching replies:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load replies",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReplies(false);
+    }
+  };
+  
+  const toggleReplies = () => {
+    if (comment.hasReplies && !showReplies && replies.length === 0) {
+      fetchReplies();
+    } else {
+      setShowReplies(!showReplies);
+    }
+  };
+  
+  const handleDeleteReply = (replyId: number) => {
+    setReplies(prev => prev.filter(reply => reply.id !== replyId));
   };
 
   return (
@@ -190,6 +247,28 @@ const CommentCard = ({
             >
               <MessageSquare className="h-4 w-4" />
               <span className="text-xs">Reply</span>
+            </Button>
+          )}
+          
+          {comment.hasReplies && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground space-x-1 hover:text-den"
+              onClick={toggleReplies}
+              disabled={loadingReplies}
+            >
+              {showReplies ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  <span className="text-xs">Hide Replies</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  <span className="text-xs">Show Replies</span>
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -254,6 +333,23 @@ const CommentCard = ({
             >
               Submit Reply
             </Button>
+          </div>
+        </div>
+      )}
+      
+      {showReplies && replies.length > 0 && (
+        <div className="ml-6 mt-2 mb-4">
+          <div className="space-y-2">
+            {replies.map((reply) => (
+              <CommentCard
+                key={reply.id}
+                comment={reply}
+                denCreatorId={denCreatorId}
+                onDelete={() => handleDeleteReply(reply.id)}
+                onReplySubmit={onReplySubmit}
+                depth={depth + 1}
+              />
+            ))}
           </div>
         </div>
       )}

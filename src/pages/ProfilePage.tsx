@@ -1,15 +1,26 @@
 
 import { useState, useEffect, useContext } from "react";
 import { useParams } from "react-router-dom";
-import { userService } from "@/services/api";
+import { userService, postService, commentService } from "@/services/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User as UserIcon } from "lucide-react";
+import { Loader2, User as UserIcon, Trash2 } from "lucide-react";
 import PostCard from "@/components/PostCard";
 import CommentCard from "@/components/CommentCard";
 import { useToast } from "@/components/ui/use-toast";
 import { AuthContext } from "@/context/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -62,20 +73,44 @@ const ProfilePage = () => {
     }
   }, [userId, toast]);
 
-  const handlePostDelete = (postId: number) => {
-    if (userHistory) {
+  const handlePostDelete = async (postId: number) => {
+    try {
+      await postService.deletePost(postId);
+      toast({
+        title: "Success",
+        description: "Post deleted successfully",
+      });
       setUserHistory({
         ...userHistory,
         posts: userHistory.posts.filter((post: any) => post.id !== postId),
       });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleCommentDelete = (commentId: number) => {
-    if (userHistory) {
+  const handleCommentDelete = async (commentId: number) => {
+    try {
+      await commentService.deleteComment(commentId);
+      toast({
+        title: "Success",
+        description: "Comment deleted successfully",
+      });
       setUserHistory({
         ...userHistory,
         comments: userHistory.comments.filter((comment: any) => comment.id !== commentId),
+      });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete comment. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -169,26 +204,56 @@ const ProfilePage = () => {
               <div className="space-y-4">
                 {userHistory.comments.map((comment: any) => (
                   <div key={comment.id} className="border rounded-lg p-4">
-                    <div className="mb-2 text-xs">
-                      <span className="text-muted-foreground">Posted in </span>
-                      <a 
-                        href={`/post/${comment.postId}`} 
-                        className="font-medium hover:underline"
-                      >
-                        {comment.postTitle}
-                      </a>
-                      <span className="text-muted-foreground"> in </span>
-                      <a 
-                        href={`/den/${comment.denId}`} 
-                        className="font-medium hover:underline"
-                      >
-                        d/{comment.denTitle}
-                      </a>
+                    <div className="mb-2 text-xs flex justify-between items-center">
+                      <div>
+                        <span className="text-muted-foreground">Posted in </span>
+                        <a 
+                          href={`/post/${comment.postId}`} 
+                          className="font-medium hover:underline"
+                        >
+                          {comment.postTitle}
+                        </a>
+                        <span className="text-muted-foreground"> in </span>
+                        <a 
+                          href={`/den/${comment.denId}`} 
+                          className="font-medium hover:underline"
+                        >
+                          d/{comment.denTitle}
+                        </a>
+                      </div>
+                      
+                      {isOwnProfile && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this comment? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleCommentDelete(comment.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
-                    <CommentCard 
-                      comment={comment} 
-                      onDelete={() => handleCommentDelete(comment.id)}
-                    />
+                    <p className="text-sm">{comment.content}</p>
                   </div>
                 ))}
               </div>

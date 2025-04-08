@@ -68,10 +68,20 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       const response = await postService.votePost(post.id, upvote);
       // Update with actual count from server
       setCurrentVoteCount(response.data.voteCount);
+      
+      toast({
+        title: "Vote recorded",
+        description: upvote ? "Post upvoted successfully" : "Post downvoted successfully",
+      });
     } catch (error) {
       // Revert on error
       setCurrentVoteCount(post.voteCount);
       console.error("Error voting:", error);
+      toast({
+        title: "Error",
+        description: "Failed to register your vote. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsVoting(false);
     }
@@ -90,6 +100,11 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       if (onDelete) onDelete();
     } catch (error) {
       console.error("Error deleting post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -100,13 +115,13 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
     : post.content;
 
   return (
-    <Card className="mb-4 hover:shadow-sm transition-shadow">
+    <Card className="mb-4 hover:shadow-md transition-shadow w-full">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
+        <div className="w-full">
           <Link to={`/post/${post.id}`} className="hover:text-den">
-            <h3 className="text-lg font-semibold">{post.title}</h3>
+            <h3 className="text-xl font-semibold">{post.title}</h3>
           </Link>
-          <div className="flex flex-wrap items-center text-muted-foreground text-xs mt-1">
+          <div className="flex flex-wrap items-center text-muted-foreground text-sm mt-1">
             <span>Posted by{" "}
               <Link to={`/profile/${post.userId}`} className="text-den hover:underline">
                 {post.username}
@@ -129,13 +144,13 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
         </div>
       </CardHeader>
       <CardContent className="pb-2">
-        <p className="text-sm">{truncatedContent}</p>
+        <p className="text-base">{truncatedContent}</p>
         {post.imageUrls && post.imageUrls.length > 0 && (
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             <img 
               src={post.imageUrls[0]} 
               alt="Post image" 
-              className="rounded-md max-h-60 object-cover"
+              className="rounded-md max-h-80 w-full object-cover"
             />
             {post.imageUrls.length > 1 && (
               <p className="text-xs text-muted-foreground">

@@ -45,6 +45,18 @@ public class PostController {
     private final PostImageRepository postImageRepository;
     private final FileStorageService fileStorageService;
     
+    @GetMapping
+    public ResponseEntity<List<PostResponse>> getAllPosts() {
+        List<Post> posts = postRepository.findAll();
+        
+        List<PostResponse> postResponses = posts.stream()
+                .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()))
+                .map(this::mapPostToResponse)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(postResponses);
+    }
+    
     @GetMapping("/den/{denId}")
     public ResponseEntity<List<PostResponse>> getPostsByDen(@PathVariable Long denId) {
         Den den = denRepository.findById(denId)
@@ -199,6 +211,10 @@ public class PostController {
         postResponse.setDenTitle(post.getDen().getTitle());
         postResponse.setCreatedAt(post.getCreatedAt());
         postResponse.setVoteCount(post.getVoteCount());
+        postResponse.setCommentCount(post.getComments().size());
+        
+        // Set den creator ID for permission checks
+        postResponse.setDenCreatorId(post.getDen().getCreator().getId());
         
         // Map all images
         if (post.getImages() != null) {

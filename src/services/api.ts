@@ -48,6 +48,8 @@ export const postService = {
   getPostsByDen: (denId: number) => api.get(`/posts/den/${denId}`),
   
   getPostById: (id: number) => api.get(`/posts/${id}`),
+
+  getAllPosts: () => api.get('/posts'),
   
   createPost: (postData: { title: string; content: string; denId: number; imageUrls?: string[] }) =>
     api.post("/posts", postData),

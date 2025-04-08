@@ -62,7 +62,9 @@ public class SecurityConfig {
                 auth.requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/dens").permitAll()
                     .requestMatchers("/api/dens/{id}").permitAll()
+                    .requestMatchers("/api/posts").permitAll()
                     .requestMatchers("/api/posts/{id}").permitAll()
+                    .requestMatchers("/api/comments/post/{postId}").permitAll()
                     .anyRequest().authenticated()
             );
 
