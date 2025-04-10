@@ -1,4 +1,3 @@
-
 import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -48,7 +47,7 @@ const Login = () => {
       setIsSubmitting(true);
       const response = await authService.login(data.username, data.password);
       
-      login(response.data.token, response.data.id, response.data.username, response.data.email);
+      login(data.username, data.password);
       
       toast({
         title: "Success",

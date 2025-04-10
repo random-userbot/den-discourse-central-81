@@ -66,22 +66,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       const response = await authService.login(username, password);
-      const { token, user: userData } = response.data;
+      const { token, id, username: responseUsername, email } = response.data;
 
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("user", JSON.stringify({
+        id,
+        username: responseUsername,
+        email
+      }));
+      
       setUser({
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        bio: userData.bio,
-        avatarUrl: userData.avatarUrl,
+        id,
+        username: responseUsername,
+        email,
+        bio: response.data.bio,
+        avatarUrl: response.data.avatarUrl,
       });
       
       toast({
         title: "Login successful",
-        description: `Welcome, ${username}!`,
+        description: `Welcome, ${responseUsername}!`,
       });
+      
       navigate("/");
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -90,6 +96,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.response?.data?.message || "Invalid credentials",
         variant: "destructive",
       });
+      throw error; // Re-throw to allow the login component to handle the error
     } finally {
       setIsLoading(false);
     }
