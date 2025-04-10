@@ -48,11 +48,7 @@ const Login = () => {
       setIsSubmitting(true);
       const response = await authService.login(data.username, data.password);
       
-      login(response.data.token, {
-        id: response.data.id,
-        username: response.data.username,
-        email: response.data.email,
-      });
+      login(response.data.token, response.data.id, response.data.username, response.data.email);
       
       toast({
         title: "Success",

@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (token: string, id: number, username: string, email: string) => void;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateCurrentUser: (userData: Partial<User>) => void;
@@ -26,7 +26,7 @@ export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   user: null,
-  login: async () => {},
+  login: () => {},
   register: async () => {},
   logout: () => {},
   updateCurrentUser: () => {},
@@ -73,38 +73,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
   
   // Login function
-  const login = async (username: string, password: string) => {
-    try {
-      const response = await authService.login(username, password);
-      localStorage.setItem("token", response.data.token);
-      
-      setUser({
-        id: response.data.id,
-        username: response.data.username,
-        email: response.data.email,
-        avatarUrl: response.data.avatarUrl,
-        bio: response.data.bio,
-      });
-      setIsAuthenticated(true);
-      
-      toast({
-        title: "Logged in successfully",
-        description: `Welcome back, ${response.data.username}!`,
-      });
-      
-      // Redirect to home or intended page
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
-    } catch (error: any) {
-      console.error("Login error:", error);
-      const errorMessage = error.response?.data?.message || "An error occurred during login";
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw error;
-    }
+  const login = (token: string, id: number, username: string, email: string) => {
+    localStorage.setItem("token", token);
+    
+    setUser({
+      id,
+      username,
+      email,
+    });
+    setIsAuthenticated(true);
+    
+    toast({
+      title: "Logged in successfully",
+      description: `Welcome back, ${username}!`,
+    });
+    
+    // Redirect to home or intended page
+    const from = location.state?.from?.pathname || "/";
+    navigate(from, { replace: true });
   };
   
   // Register function
