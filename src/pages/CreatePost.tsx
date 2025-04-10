@@ -1,60 +1,40 @@
 
-import { useState, useContext } from "react";
-import { useNavigate, Link, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Home, Loader2, ImageIcon, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { denService, postService } from "@/services/api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, X, Upload, Image } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { AuthContext } from "@/context/AuthContext";
-import { useEffect } from "react";
-
-const createPostSchema = z.object({
-  title: z
-    .string()
-    .min(3, "Title must be at least 3 characters")
-    .max(100, "Title must be less than 100 characters"),
-  content: z
-    .string()
-    .min(5, "Content must be at least 5 characters")
-    .max(5000, "Content must be less than 5000 characters"),
-  imageUrls: z.array(z.string().url("Invalid URL")).optional(),
-});
-
-type CreatePostFormValues = z.infer<typeof createPostSchema>;
+import { Separator } from "@/components/ui/separator";
 
 const CreatePost = () => {
   const { denId } = useParams<{ denId: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
   const [den, setDen] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingDen, setIsLoadingDen] = useState(true);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { isAuthenticated } = useContext(AuthContext);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDen, setIsLoadingDen] = useState(true);
+  
+  // For file uploads
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  
   useEffect(() => {
     const fetchDen = async () => {
       try {
@@ -65,10 +45,11 @@ const CreatePost = () => {
         console.error("Error fetching den:", error);
         toast({
           title: "Error",
-          description: "Failed to load den. Please try again later.",
+          description: "Failed to load den information. You will be redirected to the home page.",
           variant: "destructive",
         });
-        navigate("/");
+        // Redirect to home after a brief delay
+        setTimeout(() => navigate("/"), 2000);
       } finally {
         setIsLoadingDen(false);
       }
@@ -77,74 +58,107 @@ const CreatePost = () => {
     if (denId) {
       fetchDen();
     }
-  }, [denId, toast, navigate]);
-
-  const form = useForm<CreatePostFormValues>({
-    resolver: zodResolver(createPostSchema),
-    defaultValues: {
-      title: "",
-      content: "",
-      imageUrls: [],
-    },
-  });
-
-  const onSubmit = async (data: CreatePostFormValues) => {
+  }, [denId, navigate, toast]);
+  
+  const handleAddImageUrl = () => {
+    if (imageUrlInput && !imageUrls.includes(imageUrlInput)) {
+      setImageUrls([...imageUrls, imageUrlInput]);
+      setImageUrlInput("");
+    }
+  };
+  
+  const handleRemoveImageUrl = (urlToRemove: string) => {
+    setImageUrls(imageUrls.filter(url => url !== urlToRemove));
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles([...selectedFiles, ...filesArray]);
+    }
+  };
+  
+  const handleRemoveFile = (fileToRemove: File) => {
+    setSelectedFiles(selectedFiles.filter(file => file !== fileToRemove));
+  };
+  
+  const uploadFiles = async (): Promise<string[]> => {
+    if (selectedFiles.length === 0) return [];
+    
     try {
-      setError(null);
+      setIsUploading(true);
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append("files", file);
+      });
+      
+      const response = await postService.uploadImages(formData);
+      return response.data;
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload images. Your post will be created without the images.",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide both a title and content for your post.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
       setIsSubmitting(true);
       
+      // Upload files first if there are any
+      let allImageUrls = [...imageUrls];
+      if (selectedFiles.length > 0) {
+        const uploadedUrls = await uploadFiles();
+        allImageUrls = [...allImageUrls, ...uploadedUrls];
+      }
+      
+      // Create the post
       const postData = {
-        title: data.title,
-        content: data.content,
+        title,
+        content,
         denId: Number(denId),
-        imageUrls: imageUrls,
+        imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined
       };
       
       const response = await postService.createPost(postData);
       
       toast({
         title: "Success",
-        description: "Post created successfully!",
+        description: "Your post has been created successfully!",
       });
       
+      // Navigate to the new post
       navigate(`/post/${response.data.id}`);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Failed to create post. Please try again."
-      );
+      
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create post. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const addImageUrl = () => {
-    if (!imageUrlInput.trim()) return;
-    
-    try {
-      // Simple URL validation
-      new URL(imageUrlInput);
-      setImageUrls([...imageUrls, imageUrlInput]);
-      setImageUrlInput("");
-    } catch (e) {
-      toast({
-        title: "Invalid URL",
-        description: "Please enter a valid image URL",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeImageUrl = (index: number) => {
-    const updatedImageUrls = [...imageUrls];
-    updatedImageUrls.splice(index, 1);
-    setImageUrls(updatedImageUrls);
-  };
-
-  if (!isAuthenticated) {
-    navigate("/login");
-    return null;
-  }
-
+  
   if (isLoadingDen) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -152,144 +166,135 @@ const CreatePost = () => {
       </div>
     );
   }
-
-  if (!den) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold mb-2">Den Not Found</h2>
-        <p className="text-muted-foreground mb-4">The den you're trying to post in doesn't exist.</p>
-        <Link to="/">
-          <Button variant="outline">Return Home</Button>
-        </Link>
-      </div>
-    );
-  }
-
+  
   return (
-    <div className="max-w-2xl mx-auto">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/">
-              <Home className="h-4 w-4" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to={`/den/${denId}`}>d/{den.title}</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink className="font-semibold">Create Post</BreadcrumbLink>
-        </BreadcrumbItem>
-      </Breadcrumb>
-
-      <div className="bg-card shadow-sm rounded-lg p-6">
-        <h1 className="text-2xl font-bold mb-6">Create a New Post in d/{den.title}</h1>
-        
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter post title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter post content"
-                      {...field}
-                      className="min-h-32"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div>
-              <FormLabel>Images (optional)</FormLabel>
-              <div className="flex mt-1 mb-2">
+    <div className="max-w-3xl mx-auto">
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Create a Post in d/{den?.title}</CardTitle>
+          <CardDescription>Share your thoughts, ask questions, or start a discussion</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
                 <Input
-                  placeholder="Enter image URL"
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  className="flex-1 mr-2"
+                  id="title"
+                  placeholder="Give your post a title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
                 />
-                <Button 
-                  type="button" 
-                  onClick={addImageUrl}
-                  disabled={!imageUrlInput.trim()}
-                >
-                  Add
-                </Button>
               </div>
-              <FormDescription>
-                You can add multiple images to your post
-              </FormDescription>
               
-              {imageUrls.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="flex items-center">
-                      <div className="flex-1 text-sm truncate text-muted-foreground flex items-center">
-                        <ImageIcon className="h-4 w-4 mr-2" />
-                        {url}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeImageUrl(index)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  placeholder="What's on your mind?"
+                  className="min-h-32"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Images (optional)</Label>
+                
+                <div className="mb-4">
+                  <div className="flex items-center">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <p className="text-sm text-muted-foreground">Selected Files:</p>
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-md">
+                          <div className="flex items-center">
+                            <Image className="h-4 w-4 mr-2" />
+                            <span className="text-sm truncate" style={{maxWidth: '250px'}}>{file.name}</span>
+                          </div>
+                          <Button 
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveFile(file)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
-            
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate(`/den/${denId}`)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Post
-              </Button>
+                
+                <Separator className="my-6" />
+                
+                <Label>Image URLs (optional)</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="url"
+                    placeholder="Enter image URL"
+                    value={imageUrlInput}
+                    onChange={(e) => setImageUrlInput(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={handleAddImageUrl}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {imageUrls.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm text-muted-foreground">Image URLs:</p>
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-md">
+                        <span className="text-sm truncate" style={{maxWidth: '300px'}}>{url}</span>
+                        <Button 
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveImageUrl(url)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </form>
-        </Form>
-      </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/den/${denId}`)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || isUploading || !title.trim() || !content.trim()}
+          >
+            {(isSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isUploading ? 'Uploading Images...' : isSubmitting ? 'Creating Post...' : 'Create Post'}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

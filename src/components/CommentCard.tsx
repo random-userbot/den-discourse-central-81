@@ -1,10 +1,10 @@
 
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, ArrowDown, MessageSquare, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowUp, ArrowDown, MessageSquare, Trash2, X, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { commentService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface CommentCardProps {
   comment: {
@@ -57,8 +58,16 @@ const CommentCard = ({
   const [replies, setReplies] = useState<any[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
+  const [repliesLoaded, setRepliesLoaded] = useState(false);
   
   const canDelete = user && (user.id === comment.userId || user.id === denCreatorId);
+  
+  // Automatically check for replies when component mounts if the comment has replies
+  useEffect(() => {
+    if (comment.hasReplies && !repliesLoaded) {
+      fetchReplies();
+    }
+  }, [comment.hasReplies]);
   
   const handleVote = async (upvote: boolean) => {
     if (!user) {
@@ -177,6 +186,7 @@ const CommentCard = ({
       setLoadingReplies(true);
       const response = await commentService.getReplies(comment.id);
       setReplies(response.data);
+      setRepliesLoaded(true);
       setShowReplies(true);
     } catch (error) {
       console.error("Error fetching replies:", error);
@@ -190,16 +200,13 @@ const CommentCard = ({
     }
   };
   
-  const toggleReplies = () => {
-    if (comment.hasReplies && !showReplies && replies.length === 0) {
-      fetchReplies();
-    } else {
-      setShowReplies(!showReplies);
-    }
-  };
-  
   const handleDeleteReply = (replyId: number) => {
     setReplies(prev => prev.filter(reply => reply.id !== replyId));
+    
+    // If there are no more replies, update the hasReplies flag
+    if (replies.length <= 1) {
+      comment.hasReplies = false;
+    }
   };
 
   return (
@@ -245,31 +252,36 @@ const CommentCard = ({
               className="text-muted-foreground space-x-1 hover:text-den"
               onClick={() => setShowReplyForm(!showReplyForm)}
             >
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4 mr-1" />
               <span className="text-xs">Reply</span>
             </Button>
           )}
           
-          {comment.hasReplies && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-muted-foreground space-x-1 hover:text-den"
-              onClick={toggleReplies}
-              disabled={loadingReplies}
-            >
-              {showReplies ? (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  <span className="text-xs">Hide Replies</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4" />
-                  <span className="text-xs">Show Replies</span>
-                </>
-              )}
-            </Button>
+          {(comment.hasReplies || replies.length > 0) && (
+            <Collapsible open={showReplies} onOpenChange={setShowReplies}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-muted-foreground space-x-1 hover:text-den"
+                  onClick={() => {
+                    if (!repliesLoaded) fetchReplies();
+                  }}
+                  disabled={loadingReplies}
+                >
+                  {loadingReplies ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : showReplies ? (
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  )}
+                  <span className="text-xs">
+                    {showReplies ? "Hide Replies" : "Show Replies"}
+                  </span>
+                </Button>
+              </CollapsibleTrigger>
+            </Collapsible>
           )}
         </div>
         
@@ -331,28 +343,31 @@ const CommentCard = ({
               onClick={handleSubmitReply}
               disabled={!replyContent.trim() || isSubmittingReply}
             >
+              {isSubmittingReply ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Submit Reply
             </Button>
           </div>
         </div>
       )}
       
-      {showReplies && replies.length > 0 && (
-        <div className="ml-6 mt-2 mb-4">
-          <div className="space-y-2">
-            {replies.map((reply) => (
-              <CommentCard
-                key={reply.id}
-                comment={reply}
-                denCreatorId={denCreatorId}
-                onDelete={() => handleDeleteReply(reply.id)}
-                onReplySubmit={onReplySubmit}
-                depth={depth + 1}
-              />
-            ))}
+      <CollapsibleContent>
+        {replies.length > 0 && (
+          <div className="ml-6 mt-2 mb-4 px-4">
+            <div className="space-y-2">
+              {replies.map((reply) => (
+                <CommentCard
+                  key={reply.id}
+                  comment={reply}
+                  denCreatorId={denCreatorId}
+                  onDelete={() => handleDeleteReply(reply.id)}
+                  onReplySubmit={onReplySubmit}
+                  depth={depth + 1}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </CollapsibleContent>
     </Card>
   );
 };

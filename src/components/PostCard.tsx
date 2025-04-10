@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowUp, ArrowDown, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, MessageSquare, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
 import { postService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
@@ -46,6 +46,7 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
   const [currentVoteCount, setCurrentVoteCount] = useState(post.voteCount);
   const [isVoting, setIsVoting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const canDelete = user && (user.id === post.userId || user.id === denCreatorId);
   
@@ -110,6 +111,26 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
     }
   };
 
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (post.imageUrls && post.imageUrls.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? post.imageUrls!.length - 1 : prev - 1
+      );
+    }
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (post.imageUrls && post.imageUrls.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === post.imageUrls!.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
   const truncatedContent = post.content.length > 150 
     ? `${post.content.substring(0, 150)}...` 
     : post.content;
@@ -146,16 +167,41 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       <CardContent className="pb-2">
         <p className="text-base">{truncatedContent}</p>
         {post.imageUrls && post.imageUrls.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <img 
-              src={post.imageUrls[0]} 
-              alt="Post image" 
-              className="rounded-md max-h-80 w-full object-cover"
-            />
+          <div className="mt-4 relative">
+            <Link to={`/post/${post.id}`} className="block">
+              <img 
+                src={post.imageUrls[currentImageIndex]} 
+                alt={`Post image ${currentImageIndex + 1}`}
+                className="rounded-md max-h-80 w-full object-cover"
+              />
+            </Link>
+            
             {post.imageUrls.length > 1 && (
-              <p className="text-xs text-muted-foreground">
-                +{post.imageUrls.length - 1} more {post.imageUrls.length === 2 ? 'image' : 'images'}
-              </p>
+              <>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-70 hover:opacity-100"
+                  onClick={handlePrevImage}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-70 hover:opacity-100"
+                  onClick={handleNextImage}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <span className="bg-background/70 text-foreground px-2 py-1 rounded-md text-xs">
+                    {currentImageIndex + 1} of {post.imageUrls.length}
+                  </span>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -184,7 +230,7 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
           
           <Link to={`/post/${post.id}`} className="text-muted-foreground hover:text-den">
             <Button size="sm" variant="ghost" className="space-x-1">
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4 mr-1" />
               <span className="text-xs">{post.commentCount || 0}</span>
             </Button>
           </Link>

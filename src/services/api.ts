@@ -24,6 +24,22 @@ api.interceptors.request.use(
   }
 );
 
+// Add a response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If the error is due to an expired token, redirect to login
+    if (error.response && error.response.status === 401) {
+      // Only show the error toast if not on login/register pages
+      if (!window.location.pathname.includes("/login") && 
+          !window.location.pathname.includes("/register")) {
+        console.log("Authentication error - redirecting to login");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth services
 export const authService = {
   login: (username: string, password: string) => 
@@ -54,8 +70,8 @@ export const postService = {
   createPost: (postData: { title: string; content: string; denId: number; imageUrls?: string[] }) =>
     api.post("/posts", postData),
   
-  uploadImages: (postId: number, formData: FormData) =>
-    api.post(`/posts/${postId}/upload-images`, formData, {
+  uploadImages: (formData: FormData) =>
+    api.post(`/posts/upload-images`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   

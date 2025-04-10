@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, User as UserIcon, Trash2 } from "lucide-react";
 import PostCard from "@/components/PostCard";
-import CommentCard from "@/components/CommentCard";
 import { useToast } from "@/components/ui/use-toast";
 import { AuthContext } from "@/context/AuthContext";
 import {
@@ -220,6 +219,9 @@ const ProfilePage = () => {
                         >
                           d/{comment.denTitle}
                         </a>
+                        {comment.parentCommentId && (
+                          <span className="text-muted-foreground ml-1">(reply)</span>
+                        )}
                       </div>
                       
                       {isOwnProfile && (

@@ -116,31 +116,18 @@ public class PostController {
         return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
     }
     
-    @PostMapping("/{id}/upload-images")
+    @PostMapping("/upload-images")
     public ResponseEntity<?> uploadImages(
-            @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        
-        if (!post.getUser().getId().equals(userDetails.getId())) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(new MessageResponse("Error: You are not authorized to upload images to this post!"));
-        }
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
         
         List<String> imageUrls = new ArrayList<>();
         
         for (MultipartFile file : files) {
             String imageUrl = fileStorageService.storeFile(file);
-            
-            PostImage image = new PostImage();
-            image.setImageUrl(imageUrl);
-            image.setPost(post);
-            postImageRepository.save(image);
-            
             imageUrls.add(imageUrl);
         }
         
