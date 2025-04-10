@@ -103,4 +103,12 @@ export const userService = {
   getCurrentUserProfile: () => api.get("/users/me"),
   
   getUserHistory: (userId: number) => api.get(`/users/${userId}/history`),
+
+  updateProfile: (profileData: { bio?: string; avatarUrl?: string }) =>
+    api.put("/users/me", profileData),
+    
+  uploadAvatar: (formData: FormData) =>
+    api.post("/users/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };

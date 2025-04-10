@@ -245,7 +245,7 @@ const CommentCard = ({
             </Button>
           </div>
           
-          {depth < 2 && (
+          {depth < 3 && (
             <Button
               size="sm"
               variant="ghost"

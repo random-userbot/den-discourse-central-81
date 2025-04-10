@@ -30,6 +30,9 @@ public class User {
     private String email;
 
     private String avatarUrl;
+    
+    @Column(columnDefinition = "TEXT")
+    private String bio;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

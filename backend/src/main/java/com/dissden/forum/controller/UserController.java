@@ -9,17 +9,21 @@ import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.dissden.forum.model.Comment;
 import com.dissden.forum.model.Post;
 import com.dissden.forum.model.User;
+import com.dissden.forum.payload.request.UpdateProfileRequest;
 import com.dissden.forum.payload.response.CommentResponse;
+import com.dissden.forum.payload.response.MessageResponse;
 import com.dissden.forum.payload.response.PostResponse;
 import com.dissden.forum.payload.response.UserProfileResponse;
 import com.dissden.forum.repository.CommentRepository;
 import com.dissden.forum.repository.PostRepository;
 import com.dissden.forum.repository.UserRepository;
 import com.dissden.forum.security.services.UserDetailsImpl;
+import com.dissden.forum.service.FileStorageService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +36,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final FileStorageService fileStorageService;
     
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getUserProfile(@PathVariable Long id) {
@@ -43,6 +48,7 @@ public class UserController {
         profileResponse.setUsername(user.getUsername());
         profileResponse.setAvatarUrl(user.getAvatarUrl());
         profileResponse.setCreatedAt(user.getCreatedAt());
+        profileResponse.setBio(user.getBio());
         
         return ResponseEntity.ok(profileResponse);
     }
@@ -52,6 +58,58 @@ public class UserController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         
         return getUserProfile(userDetails.getId());
+    }
+    
+    @PutMapping("/me")
+    public ResponseEntity<UserProfileResponse> updateProfile(
+            @RequestBody UpdateProfileRequest updateProfileRequest,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Update bio if provided
+        if (updateProfileRequest.getBio() != null) {
+            user.setBio(updateProfileRequest.getBio());
+        }
+        
+        // Update avatar URL if provided
+        if (updateProfileRequest.getAvatarUrl() != null) {
+            user.setAvatarUrl(updateProfileRequest.getAvatarUrl());
+        }
+        
+        User updatedUser = userRepository.save(user);
+        
+        UserProfileResponse profileResponse = new UserProfileResponse();
+        profileResponse.setId(updatedUser.getId());
+        profileResponse.setUsername(updatedUser.getUsername());
+        profileResponse.setAvatarUrl(updatedUser.getAvatarUrl());
+        profileResponse.setCreatedAt(updatedUser.getCreatedAt());
+        profileResponse.setBio(updatedUser.getBio());
+        
+        return ResponseEntity.ok(profileResponse);
+    }
+    
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        
+        try {
+            User user = userRepository.findById(userDetails.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            String avatarUrl = fileStorageService.storeFile(file);
+            user.setAvatarUrl(avatarUrl);
+            userRepository.save(user);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("avatarUrl", avatarUrl);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Could not upload avatar: " + e.getMessage()));
+        }
     }
     
     @GetMapping("/{id}/history")
@@ -68,8 +126,16 @@ public class UserController {
                     response.setContent(post.getContent());
                     response.setDenId(post.getDen().getId());
                     response.setDenTitle(post.getDen().getTitle());
+                    response.setUserId(post.getUser().getId());
+                    response.setUsername(post.getUser().getUsername());
                     response.setCreatedAt(post.getCreatedAt());
                     response.setVoteCount(post.getVoteCount());
+                    if (post.getImages() != null && !post.getImages().isEmpty()) {
+                        List<String> imageUrls = post.getImages().stream()
+                                .map(image -> image.getUrl())
+                                .collect(Collectors.toList());
+                        response.setImageUrls(imageUrls);
+                    }
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -84,8 +150,19 @@ public class UserController {
                     response.setPostTitle(comment.getPost().getTitle());
                     response.setDenId(comment.getPost().getDen().getId());
                     response.setDenTitle(comment.getPost().getDen().getTitle());
+                    response.setUserId(comment.getUser().getId());
+                    response.setUsername(comment.getUser().getUsername());
                     response.setCreatedAt(comment.getCreatedAt());
                     response.setVoteCount(comment.getVoteCount());
+                    
+                    if (comment.getParentComment() != null) {
+                        response.setParentCommentId(comment.getParentComment().getId());
+                    }
+                    
+                    if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
+                        response.setHasReplies(true);
+                    }
+                    
                     return response;
                 })
                 .collect(Collectors.toList());

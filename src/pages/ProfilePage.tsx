@@ -5,10 +5,11 @@ import { userService, postService, commentService } from "@/services/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User as UserIcon, Trash2 } from "lucide-react";
+import { Loader2, User as UserIcon, Trash2, Pencil, X, CheckCircle2 } from "lucide-react";
 import PostCard from "@/components/PostCard";
 import { useToast } from "@/components/ui/use-toast";
 import { AuthContext } from "@/context/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -27,8 +40,14 @@ const ProfilePage = () => {
   const [userHistory, setUserHistory] = useState<any>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [bioText, setBioText] = useState("");
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user: currentUser } = useContext(AuthContext);
+  const { user: currentUser, updateCurrentUser } = useContext(AuthContext);
   const isOwnProfile = currentUser?.id === Number(userId);
 
   useEffect(() => {
@@ -37,6 +56,7 @@ const ProfilePage = () => {
         setIsLoadingProfile(true);
         const response = await userService.getUserProfile(Number(userId));
         setProfile(response.data);
+        setBioText(response.data.bio || "");
       } catch (error) {
         console.error("Error fetching user profile:", error);
         toast({
@@ -114,6 +134,103 @@ const ProfilePage = () => {
     }
   };
 
+  const handleSaveBio = async () => {
+    if (!isOwnProfile) return;
+
+    try {
+      setIsUpdatingProfile(true);
+      const response = await userService.updateProfile({
+        bio: bioText
+      });
+      
+      setProfile({
+        ...profile,
+        bio: response.data.bio
+      });
+      
+      // If this is the current user's profile, update the auth context
+      if (isOwnProfile && updateCurrentUser) {
+        updateCurrentUser({
+          ...currentUser,
+          bio: response.data.bio
+        });
+      }
+      
+      setIsEditingBio(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedAvatarFile(file);
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAvatarUpload = async () => {
+    if (!selectedAvatarFile) return;
+    
+    try {
+      setIsUploadingAvatar(true);
+      const formData = new FormData();
+      formData.append('file', selectedAvatarFile);
+      
+      const response = await userService.uploadAvatar(formData);
+      
+      // Update profile state
+      setProfile({
+        ...profile,
+        avatarUrl: response.data.avatarUrl
+      });
+      
+      // If this is the current user's profile, update the auth context
+      if (isOwnProfile && updateCurrentUser) {
+        updateCurrentUser({
+          ...currentUser,
+          avatarUrl: response.data.avatarUrl
+        });
+      }
+      
+      // Reset the file input and preview
+      setSelectedAvatarFile(null);
+      setAvatarPreview(null);
+      
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   if (isLoadingProfile) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -135,28 +252,137 @@ const ProfilePage = () => {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <div className="bg-card shadow-sm rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-              {profile.avatarUrl ? (
-                <img 
-                  src={profile.avatarUrl} 
-                  alt={profile.username} 
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                <UserIcon className="h-10 w-10 text-muted-foreground" />
+          <div className="flex flex-col md:flex-row md:items-start gap-6">
+            <div className="relative">
+              <Avatar className="h-32 w-32 border-2 border-background">
+                {profile.avatarUrl ? (
+                  <AvatarImage src={profile.avatarUrl} alt={profile.username} />
+                ) : (
+                  <AvatarFallback className="text-3xl">
+                    <UserIcon className="h-16 w-16 text-muted-foreground" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              
+              {isOwnProfile && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      className="absolute bottom-0 right-0 rounded-full bg-background shadow-md"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Update Avatar</DialogTitle>
+                      <DialogDescription>
+                        Upload a new profile picture.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-4">
+                      {avatarPreview && (
+                        <div className="flex justify-center mb-4">
+                          <Avatar className="h-40 w-40">
+                            <AvatarImage src={avatarPreview} alt="Preview" />
+                          </Avatar>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="avatar">Select an image</Label>
+                        <Input 
+                          id="avatar" 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleAvatarChange}
+                        />
+                      </div>
+                    </div>
+                    
+                    <DialogFooter>
+                      <Button
+                        onClick={handleAvatarUpload}
+                        disabled={!selectedAvatarFile || isUploadingAvatar}
+                      >
+                        {isUploadingAvatar && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Upload
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
-            <div className="ml-6">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold">{profile.username}</h1>
-                {isOwnProfile && (
-                  <Badge className="ml-2 bg-den text-den-foreground">You</Badge>
+            
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h1 className="text-2xl font-bold">{profile.username}</h1>
+                  {isOwnProfile && (
+                    <Badge className="ml-2 bg-den text-den-foreground">You</Badge>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Member since {new Date(profile.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {isOwnProfile && !isEditingBio && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsEditingBio(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit Bio
+                  </Button>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Member since {new Date(profile.createdAt).toLocaleDateString()}
-              </p>
+              
+              {isEditingBio ? (
+                <div className="mt-4">
+                  <Textarea 
+                    value={bioText} 
+                    onChange={(e) => setBioText(e.target.value)}
+                    placeholder="Write something about yourself..."
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex justify-end mt-2 space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingBio(false);
+                        setBioText(profile.bio || "");
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveBio}
+                      disabled={isUpdatingProfile}
+                    >
+                      {isUpdatingProfile ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <p className="text-sm">
+                    {profile.bio || (isOwnProfile ? "Add a bio to tell others about yourself..." : "This user hasn't added a bio yet.")}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -256,6 +482,51 @@ const ProfilePage = () => {
                       )}
                     </div>
                     <p className="text-sm">{comment.content}</p>
+                    <div className="mt-2 flex items-center space-x-2">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 px-2 text-muted-foreground hover:text-den"
+                        onClick={async () => {
+                          try {
+                            const response = await commentService.voteComment(comment.id, true);
+                            // Update comment vote count in userHistory
+                            setUserHistory({
+                              ...userHistory,
+                              comments: userHistory.comments.map((c: any) => 
+                                c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
+                              )
+                            });
+                          } catch (error) {
+                            console.error("Error voting on comment:", error);
+                          }
+                        }}
+                      >
+                        ▲ Upvote
+                      </Button>
+                      <span className="text-sm font-medium">{comment.voteCount}</span>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 px-2 text-muted-foreground hover:text-den"
+                        onClick={async () => {
+                          try {
+                            const response = await commentService.voteComment(comment.id, false);
+                            // Update comment vote count in userHistory
+                            setUserHistory({
+                              ...userHistory,
+                              comments: userHistory.comments.map((c: any) => 
+                                c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
+                              )
+                            });
+                          } catch (error) {
+                            console.error("Error voting on comment:", error);
+                          }
+                        }}
+                      >
+                        ▼ Downvote
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
