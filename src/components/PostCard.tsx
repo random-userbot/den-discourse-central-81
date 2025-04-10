@@ -1,12 +1,11 @@
-
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowUp, ArrowDown, MessageSquare, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useContext, useState } from "react";
-import { postService } from "@/services/api";
+import { useContext, useState, useEffect } from "react";
+import { postService, getImageUrl } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import {
   AlertDialog,
@@ -47,6 +46,13 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
   const [isVoting, setIsVoting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [processedImageUrls, setProcessedImageUrls] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (post.imageUrls && post.imageUrls.length > 0) {
+      setProcessedImageUrls(post.imageUrls.map(url => getImageUrl(url)));
+    }
+  }, [post.imageUrls]);
   
   const canDelete = user && (user.id === post.userId || user.id === denCreatorId);
   
@@ -63,11 +69,9 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
     
     try {
       setIsVoting(true);
-      // Optimistic update
       setCurrentVoteCount(prev => upvote ? prev + 1 : prev - 1);
       
       const response = await postService.votePost(post.id, upvote);
-      // Update with actual count from server
       setCurrentVoteCount(response.data.voteCount);
       
       toast({
@@ -75,7 +79,6 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
         description: upvote ? "Post upvoted successfully" : "Post downvoted successfully",
       });
     } catch (error) {
-      // Revert on error
       setCurrentVoteCount(post.voteCount);
       console.error("Error voting:", error);
       toast({
@@ -114,9 +117,9 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
   const handlePrevImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (post.imageUrls && post.imageUrls.length > 0) {
+    if (processedImageUrls && processedImageUrls.length > 0) {
       setCurrentImageIndex((prev) => 
-        prev === 0 ? post.imageUrls!.length - 1 : prev - 1
+        prev === 0 ? processedImageUrls.length - 1 : prev - 1
       );
     }
   };
@@ -124,9 +127,9 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
   const handleNextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (post.imageUrls && post.imageUrls.length > 0) {
+    if (processedImageUrls && processedImageUrls.length > 0) {
       setCurrentImageIndex((prev) => 
-        prev === post.imageUrls!.length - 1 ? 0 : prev + 1
+        prev === processedImageUrls.length - 1 ? 0 : prev + 1
       );
     }
   };
@@ -166,17 +169,21 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       </CardHeader>
       <CardContent className="pb-2">
         <p className="text-base">{truncatedContent}</p>
-        {post.imageUrls && post.imageUrls.length > 0 && (
+        {processedImageUrls && processedImageUrls.length > 0 && (
           <div className="mt-4 relative">
             <Link to={`/post/${post.id}`} className="block">
               <img 
-                src={post.imageUrls[currentImageIndex]} 
+                src={processedImageUrls[currentImageIndex]} 
                 alt={`Post image ${currentImageIndex + 1}`}
                 className="rounded-md max-h-80 w-full object-cover"
+                onError={(e) => {
+                  console.log("Image failed to load:", processedImageUrls[currentImageIndex]);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </Link>
             
-            {post.imageUrls.length > 1 && (
+            {processedImageUrls.length > 1 && (
               <>
                 <Button 
                   variant="secondary" 
@@ -198,7 +205,7 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
                 
                 <div className="absolute bottom-2 left-0 right-0 text-center">
                   <span className="bg-background/70 text-foreground px-2 py-1 rounded-md text-xs">
-                    {currentImageIndex + 1} of {post.imageUrls.length}
+                    {currentImageIndex + 1} of {processedImageUrls.length}
                   </span>
                 </div>
               </>

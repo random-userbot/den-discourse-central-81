@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useContext } from "react";
 import { useParams } from "react-router-dom";
-import { userService, postService, commentService } from "@/services/api";
+import { userService, postService, commentService, getImageUrl } from "@/services/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +48,7 @@ const ProfilePage = () => {
   const { toast } = useToast();
   const { user: currentUser, updateCurrentUser } = useContext(AuthContext);
   const isOwnProfile = currentUser?.id === Number(userId);
+  const [displayedAvatarUrl, setDisplayedAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -57,6 +57,10 @@ const ProfilePage = () => {
         const response = await userService.getUserProfile(Number(userId));
         setProfile(response.data);
         setBioText(response.data.bio || "");
+        
+        if (response.data.avatarUrl) {
+          setDisplayedAvatarUrl(getImageUrl(response.data.avatarUrl));
+        }
       } catch (error) {
         console.error("Error fetching user profile:", error);
         toast({
@@ -148,7 +152,6 @@ const ProfilePage = () => {
         bio: response.data.bio
       });
       
-      // If this is the current user's profile, update the auth context
       if (isOwnProfile && updateCurrentUser) {
         updateCurrentUser({
           ...currentUser,
@@ -178,7 +181,6 @@ const ProfilePage = () => {
       const file = e.target.files[0];
       setSelectedAvatarFile(file);
       
-      // Create a preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
@@ -196,14 +198,14 @@ const ProfilePage = () => {
       formData.append('file', selectedAvatarFile);
       
       const response = await userService.uploadAvatar(formData);
+      const avatarUrl = getImageUrl(response.data.avatarUrl);
       
-      // Update profile state
       setProfile({
         ...profile,
         avatarUrl: response.data.avatarUrl
       });
+      setDisplayedAvatarUrl(avatarUrl);
       
-      // If this is the current user's profile, update the auth context
       if (isOwnProfile && updateCurrentUser) {
         updateCurrentUser({
           ...currentUser,
@@ -211,7 +213,6 @@ const ProfilePage = () => {
         });
       }
       
-      // Reset the file input and preview
       setSelectedAvatarFile(null);
       setAvatarPreview(null);
       
@@ -255,8 +256,15 @@ const ProfilePage = () => {
           <div className="flex flex-col md:flex-row md:items-start gap-6">
             <div className="relative">
               <Avatar className="h-32 w-32 border-2 border-background">
-                {profile.avatarUrl ? (
-                  <AvatarImage src={profile.avatarUrl} alt={profile.username} />
+                {displayedAvatarUrl ? (
+                  <AvatarImage 
+                    src={displayedAvatarUrl} 
+                    alt={profile.username} 
+                    onError={() => {
+                      console.error("Avatar failed to load:", displayedAvatarUrl);
+                      setDisplayedAvatarUrl(null);
+                    }}
+                  />
                 ) : (
                   <AvatarFallback className="text-3xl">
                     <UserIcon className="h-16 w-16 text-muted-foreground" />
@@ -410,6 +418,7 @@ const ProfilePage = () => {
                     post={post} 
                     showDenInfo={true}
                     onDelete={() => handlePostDelete(post.id)}
+                    denCreatorId={post.denCreatorId}
                   />
                 ))}
               </div>
@@ -490,15 +499,25 @@ const ProfilePage = () => {
                         onClick={async () => {
                           try {
                             const response = await commentService.voteComment(comment.id, true);
-                            // Update comment vote count in userHistory
                             setUserHistory({
                               ...userHistory,
                               comments: userHistory.comments.map((c: any) => 
                                 c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
                               )
                             });
+                            
+                            toast({
+                              title: "Success",
+                              description: "Comment upvoted successfully",
+                              duration: 2000,
+                            });
                           } catch (error) {
                             console.error("Error voting on comment:", error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upvote comment",
+                              variant: "destructive",
+                            });
                           }
                         }}
                       >
@@ -512,15 +531,25 @@ const ProfilePage = () => {
                         onClick={async () => {
                           try {
                             const response = await commentService.voteComment(comment.id, false);
-                            // Update comment vote count in userHistory
                             setUserHistory({
                               ...userHistory,
                               comments: userHistory.comments.map((c: any) => 
                                 c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
                               )
                             });
+                            
+                            toast({
+                              title: "Success",
+                              description: "Comment downvoted successfully",
+                              duration: 2000,
+                            });
                           } catch (error) {
                             console.error("Error voting on comment:", error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to downvote comment",
+                              variant: "destructive",
+                            });
                           }
                         }}
                       >

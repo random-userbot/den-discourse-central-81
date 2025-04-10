@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useContext } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { postService, commentService } from "@/services/api";
+import { postService, commentService, getImageUrl } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -65,6 +64,16 @@ const PostPage = () => {
     }
   }, [postId, toast]);
 
+  useEffect(() => {
+    if (post && post.imageUrls && post.imageUrls.length > 0) {
+      const processedUrls = post.imageUrls.map((url: string) => getImageUrl(url));
+      setPost({
+        ...post,
+        processedImageUrls: processedUrls
+      });
+    }
+  }, [post?.imageUrls]);
+
   const handleSubmitComment = async () => {
     if (!newComment.trim() || isSubmittingComment) return;
     
@@ -76,10 +85,7 @@ const PostPage = () => {
         postId: Number(postId),
       });
       
-      // Add the new comment to the list
       setComments([response.data, ...comments]);
-      
-      // Clear the input
       setNewComment("");
       
       toast({
@@ -109,7 +115,6 @@ const PostPage = () => {
     try {
       const response = await commentService.createComment(commentData);
       
-      // If parent comment already has replies loaded, add the new reply
       if (commentData.parentCommentId && commentReplies[commentData.parentCommentId]) {
         setCommentReplies((prev) => ({
           ...prev,
@@ -120,7 +125,6 @@ const PostPage = () => {
         }));
       }
       
-      // Update the hasReplies flag on the parent comment
       if (commentData.parentCommentId) {
         setComments((prev) =>
           prev.map((comment) =>
@@ -139,10 +143,8 @@ const PostPage = () => {
   };
   
   const handleDeleteComment = (commentId: number) => {
-    // Remove the comment
     setComments(comments.filter(comment => comment.id !== commentId));
     
-    // Also remove any replies for that comment
     if (commentReplies[commentId]) {
       const newReplies = { ...commentReplies };
       delete newReplies[commentId];
@@ -161,7 +163,6 @@ const PostPage = () => {
         [parentCommentId]: updatedReplies,
       });
       
-      // Update the hasReplies flag if there are no more replies
       if (updatedReplies.length === 0) {
         setComments((prev) =>
           prev.map((comment) =>
@@ -175,7 +176,6 @@ const PostPage = () => {
   };
   
   const handleDeletePost = () => {
-    // Navigate back to the den page
     if (post?.denId) {
       navigate(`/den/${post.denId}`);
     } else {

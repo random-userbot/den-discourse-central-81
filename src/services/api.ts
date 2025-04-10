@@ -2,6 +2,7 @@
 import axios from "axios";
 
 const API_URL = "http://localhost:8080/api";
+const PUBLIC_URL = "http://localhost:8080"; // Add this to access public resources like images
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -39,6 +40,28 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Helper function to convert localhost URL to properly accessible URLs
+export const getImageUrl = (url: string) => {
+  if (!url) return '';
+  
+  // If it's already an external URL, return as is
+  if (url.startsWith('http') && !url.includes('localhost')) {
+    return url;
+  }
+  
+  // If it's a localhost URL, convert it to the correct format
+  if (url.includes('localhost:8080')) {
+    return url.replace('http://localhost:8080', PUBLIC_URL);
+  }
+  
+  // If it's just a path, prepend the base URL
+  if (url.startsWith('/uploads')) {
+    return `${PUBLIC_URL}${url}`;
+  }
+  
+  return url;
+};
 
 // Auth services
 export const authService = {

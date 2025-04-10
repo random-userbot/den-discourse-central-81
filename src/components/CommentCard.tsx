@@ -1,4 +1,3 @@
-
 import { useContext, useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -62,7 +61,6 @@ const CommentCard = ({
   
   const canDelete = user && (user.id === comment.userId || user.id === denCreatorId);
   
-  // Automatically check for replies when component mounts if the comment has replies
   useEffect(() => {
     if (comment.hasReplies && !repliesLoaded) {
       fetchReplies();
@@ -82,19 +80,17 @@ const CommentCard = ({
     
     try {
       setIsVoting(true);
-      // Optimistic update
       setCurrentVoteCount(prev => upvote ? prev + 1 : prev - 1);
       
       const response = await commentService.voteComment(comment.id, upvote);
-      // Update with actual count from server
       setCurrentVoteCount(response.data.voteCount);
       
       toast({
         title: "Vote recorded",
         description: upvote ? "Comment upvoted successfully" : "Comment downvoted successfully",
+        duration: 2000,
       });
     } catch (error) {
-      // Revert on error
       setCurrentVoteCount(comment.voteCount);
       console.error("Error voting:", error);
       toast({
@@ -203,7 +199,6 @@ const CommentCard = ({
   const handleDeleteReply = (replyId: number) => {
     setReplies(prev => prev.filter(reply => reply.id !== replyId));
     
-    // If there are no more replies, update the hasReplies flag
     if (replies.length <= 1) {
       comment.hasReplies = false;
     }

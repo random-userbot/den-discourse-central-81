@@ -1,4 +1,3 @@
-
 package com.dissden.forum.controller;
 
 import java.util.HashMap;
@@ -119,27 +118,7 @@ public class UserController {
         
         List<Post> userPosts = postRepository.findByUserOrderByCreatedAtDesc(user);
         List<PostResponse> postResponses = userPosts.stream()
-                .map(post -> {
-                    PostResponse response = new PostResponse();
-                    response.setId(post.getId());
-                    response.setTitle(post.getTitle());
-                    response.setContent(post.getContent());
-                    response.setDenId(post.getDen().getId());
-                    response.setDenTitle(post.getDen().getTitle());
-                    response.setUserId(post.getUser().getId());
-                    response.setUsername(post.getUser().getUsername());
-                    response.setCreatedAt(post.getCreatedAt());
-                    response.setVoteCount(post.getVoteCount());
-                    response.setCommentCount(post.getComments().size());
-                    response.setDenCreatorId(post.getDen().getCreator().getId());
-                    if (post.getImages() != null && !post.getImages().isEmpty()) {
-                        List<String> imageUrls = post.getImages().stream()
-                                .map(image -> image.getImageUrl())
-                                .collect(Collectors.toList());
-                        response.setImageUrls(imageUrls);
-                    }
-                    return response;
-                })
+                .map(this::mapPostToResponse)
                 .collect(Collectors.toList());
         
         List<Comment> userComments = commentRepository.findByUserOrderByCreatedAtDesc(user);
@@ -174,5 +153,29 @@ public class UserController {
         history.put("comments", commentResponses);
         
         return ResponseEntity.ok(history);
+    }
+    
+    private PostResponse mapPostToResponse(Post post) {
+        PostResponse response = new PostResponse();
+        response.setId(post.getId());
+        response.setTitle(post.getTitle());
+        response.setContent(post.getContent());
+        response.setUserId(post.getUser().getId());
+        response.setUsername(post.getUser().getUsername());
+        response.setDenId(post.getDen().getId());
+        response.setDenTitle(post.getDen().getTitle());
+        response.setCreatedAt(post.getCreatedAt());
+        response.setVoteCount(post.getVoteCount());
+        response.setCommentCount(post.getComments().size());
+        response.setDenCreatorId(post.getDen().getCreator().getId());
+        
+        if (post.getImages() != null && !post.getImages().isEmpty()) {
+            List<String> imageUrls = post.getImages().stream()
+                    .map(image -> image.getImageUrl())
+                    .collect(Collectors.toList());
+            response.setImageUrls(imageUrls);
+        }
+        
+        return response;
     }
 }
