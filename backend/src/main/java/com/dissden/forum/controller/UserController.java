@@ -130,9 +130,11 @@ public class UserController {
                     response.setUsername(post.getUser().getUsername());
                     response.setCreatedAt(post.getCreatedAt());
                     response.setVoteCount(post.getVoteCount());
+                    response.setCommentCount(post.getComments().size());
+                    response.setDenCreatorId(post.getDen().getCreator().getId());
                     if (post.getImages() != null && !post.getImages().isEmpty()) {
                         List<String> imageUrls = post.getImages().stream()
-                                .map(image -> image.getUrl())
+                                .map(image -> image.getImageUrl())
                                 .collect(Collectors.toList());
                         response.setImageUrls(imageUrls);
                     }

@@ -17,5 +17,7 @@ public class PostResponse {
     private String denTitle;
     private LocalDateTime createdAt;
     private Integer voteCount;
+    private Integer commentCount;
+    private Long denCreatorId;
     private List<String> imageUrls;
 }
