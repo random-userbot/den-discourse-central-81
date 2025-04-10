@@ -1,9 +1,20 @@
+
 import { useContext, useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, ArrowDown, MessageSquare, Trash2, X, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { 
+  ArrowUp, 
+  ArrowDown, 
+  MessageSquare, 
+  Trash2, 
+  X, 
+  ChevronDown, 
+  ChevronUp, 
+  Loader2,
+  AlertTriangle
+} from "lucide-react";
 import { commentService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import {
@@ -20,6 +31,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CommentCardProps {
   comment: {
@@ -58,14 +70,15 @@ const CommentCard = ({
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [repliesLoaded, setRepliesLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   const canDelete = user && (user.id === comment.userId || user.id === denCreatorId);
   
   useEffect(() => {
-    if (comment.hasReplies && !repliesLoaded) {
+    if (comment.hasReplies && !repliesLoaded && showReplies) {
       fetchReplies();
     }
-  }, [comment.hasReplies]);
+  }, [comment.hasReplies, showReplies]);
   
   const handleVote = async (upvote: boolean) => {
     if (!user) {
@@ -180,17 +193,13 @@ const CommentCard = ({
     
     try {
       setLoadingReplies(true);
+      setLoadError(null);
       const response = await commentService.getReplies(comment.id);
       setReplies(response.data);
       setRepliesLoaded(true);
-      setShowReplies(true);
     } catch (error) {
       console.error("Error fetching replies:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load replies",
-        variant: "destructive",
-      });
+      setLoadError("Failed to load replies. Please try again.");
     } finally {
       setLoadingReplies(false);
     }
@@ -200,7 +209,18 @@ const CommentCard = ({
     setReplies(prev => prev.filter(reply => reply.id !== replyId));
     
     if (replies.length <= 1) {
+      // Update local state to reflect that there are no more replies
       comment.hasReplies = false;
+    }
+  };
+
+  const handleToggleReplies = () => {
+    const newShowReplies = !showReplies;
+    setShowReplies(newShowReplies);
+    
+    // If we're showing replies and they haven't been loaded yet, fetch them
+    if (newShowReplies && !repliesLoaded && comment.hasReplies) {
+      fetchReplies();
     }
   };
 
@@ -253,30 +273,24 @@ const CommentCard = ({
           )}
           
           {(comment.hasReplies || replies.length > 0) && (
-            <Collapsible open={showReplies} onOpenChange={setShowReplies}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-muted-foreground space-x-1 hover:text-den"
-                  onClick={() => {
-                    if (!repliesLoaded) fetchReplies();
-                  }}
-                  disabled={loadingReplies}
-                >
-                  {loadingReplies ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : showReplies ? (
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                  )}
-                  <span className="text-xs">
-                    {showReplies ? "Hide Replies" : "Show Replies"}
-                  </span>
-                </Button>
-              </CollapsibleTrigger>
-            </Collapsible>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground space-x-1 hover:text-den"
+              onClick={handleToggleReplies}
+              disabled={loadingReplies}
+            >
+              {loadingReplies ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : showReplies ? (
+                <ChevronUp className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              )}
+              <span className="text-xs">
+                {showReplies ? "Hide Replies" : "Show Replies"}
+              </span>
+            </Button>
           )}
         </div>
         
@@ -345,9 +359,18 @@ const CommentCard = ({
         </div>
       )}
       
-      <CollapsibleContent>
-        {replies.length > 0 && (
-          <div className="ml-6 mt-2 mb-4 px-4">
+      {showReplies && (
+        <div className="ml-6 mt-2 mb-4 px-4">
+          {loadError ? (
+            <Alert variant="destructive" className="mb-2">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <AlertDescription>{loadError}</AlertDescription>
+            </Alert>
+          ) : loadingReplies ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : replies.length > 0 ? (
             <div className="space-y-2">
               {replies.map((reply) => (
                 <CommentCard
@@ -360,9 +383,13 @@ const CommentCard = ({
                 />
               ))}
             </div>
-          </div>
-        )}
-      </CollapsibleContent>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              No replies found.
+            </p>
+          )}
+        </div>
+      )}
     </Card>
   );
 };

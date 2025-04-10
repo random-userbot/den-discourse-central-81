@@ -1,8 +1,8 @@
 
 import axios from "axios";
 
-// Base API URL
-const API_URL = "http://localhost:8080/api";
+// Base API URL - Update to use the current origin instead of hardcoded localhost
+const API_URL = `${window.location.protocol}//${window.location.hostname}:8080/api`;
 
 // Create axios instance
 export const api = axios.create({
@@ -10,6 +10,7 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // Add timeout to prevent hanging requests
 });
 
 // Add request interceptor to include auth token
@@ -28,7 +29,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+    if (error.response) {
+      // Server responded with an error status code
+      console.error("API Error:", error.response.status, error.response.data);
+    } else if (error.request) {
+      // Request was made but no response was received
+      console.error("API Error: No response received. Server may be down.", error.request);
+    } else {
+      // Something else caused the error
+      console.error("API Error:", error.message);
+    }
     return Promise.reject(error);
   }
 );
@@ -37,7 +47,7 @@ api.interceptors.response.use(
 export const getImageUrl = (url: string) => {
   if (!url) return "";
   if (url.startsWith("http")) return url;
-  if (url.startsWith("/uploads")) return `http://localhost:8080${url}`;
+  if (url.startsWith("/uploads")) return `${window.location.protocol}//${window.location.hostname}:8080${url}`;
   return url;
 };
 

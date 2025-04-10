@@ -11,11 +11,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, User, Calendar, X } from "lucide-react";
+import { Loader2, Upload, User, Calendar, X, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import PostCard from "@/components/PostCard";
 import CommentCard from "@/components/CommentCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -30,20 +31,32 @@ const ProfilePage = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { data: userProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery({
+  const { 
+    data: userProfile, 
+    isLoading: isLoadingProfile, 
+    error: profileError,
+    refetch: refetchProfile 
+  } = useQuery({
     queryKey: ["userProfile", userId],
     queryFn: () => userService.getUserProfile(Number(userId)),
+    retry: 1,
   });
   
-  const { data: userHistory, isLoading: isLoadingHistory, refetch: refetchHistory } = useQuery({
+  const { 
+    data: userHistory, 
+    isLoading: isLoadingHistory, 
+    error: historyError,
+    refetch: refetchHistory 
+  } = useQuery({
     queryKey: ["userHistory", userId],
     queryFn: () => userService.getUserHistory(Number(userId)),
+    retry: 1,
   });
   
   const isOwnProfile = currentUser && currentUser.id.toString() === userId;
   
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile?.data) {
       setBio(userProfile.data.bio || "");
     }
   }, [userProfile]);
@@ -76,7 +89,7 @@ const ProfilePage = () => {
       setIsSubmitting(true);
       
       // Upload avatar if selected
-      let avatarUrl = userProfile?.data.avatarUrl;
+      let avatarUrl = userProfile?.data?.avatarUrl;
       if (avatarFile) {
         const formData = new FormData();
         formData.append("file", avatarFile);
@@ -101,7 +114,7 @@ const ProfilePage = () => {
       console.error("Error updating profile:", error);
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -109,7 +122,7 @@ const ProfilePage = () => {
     }
   };
   
-  const handleDeletePost = async (postId: number) => {
+  const handleDeletePost = async () => {
     try {
       await refetchHistory();
       toast({
@@ -118,6 +131,11 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error("Error refreshing posts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh post list. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -130,6 +148,11 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error("Error refreshing comments:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh comment list. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -141,7 +164,27 @@ const ProfilePage = () => {
     );
   }
   
-  if (!userProfile) {
+  if (profileError) {
+    return (
+      <div className="max-w-4xl mx-auto py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Error loading profile. The server may be unreachable or the user may not exist.
+          </AlertDescription>
+        </Alert>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => navigate("/")}
+        >
+          Go Home
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!userProfile?.data) {
     return (
       <div className="text-center py-8">
         <h1 className="text-2xl font-bold">User not found</h1>
@@ -282,13 +325,20 @@ const ProfilePage = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : userHistory && userHistory.data.posts.length > 0 ? (
+          ) : historyError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <AlertDescription>
+                Unable to load posts. Please try again later.
+              </AlertDescription>
+            </Alert>
+          ) : userHistory?.data?.posts?.length > 0 ? (
             userHistory.data.posts.map((post: any) => (
               <PostCard 
                 key={post.id} 
                 post={post}
                 showDenInfo={true}
-                onDelete={() => handleDeletePost(post.id)}
+                onDelete={() => handleDeletePost()}
               />
             ))
           ) : (
@@ -305,7 +355,14 @@ const ProfilePage = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : userHistory && userHistory.data.comments.length > 0 ? (
+          ) : historyError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <AlertDescription>
+                Unable to load comments. Please try again later.
+              </AlertDescription>
+            </Alert>
+          ) : userHistory?.data?.comments?.length > 0 ? (
             userHistory.data.comments.map((comment: any) => (
               <Card key={comment.id} className="mb-4">
                 <CardHeader className="pb-2">

@@ -17,7 +17,8 @@ import {
   Trash2, 
   ChevronLeft,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  AlertTriangle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
@@ -32,6 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const PostPage = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -55,19 +57,22 @@ const PostPage = () => {
   } = useQuery({
     queryKey: ["post", postId],
     queryFn: () => postService.getPostById(Number(postId)),
+    retry: 1,
   });
   
   const { 
     data: commentsData, 
-    isLoading: isLoadingComments, 
+    isLoading: isLoadingComments,
+    error: commentsError, 
     refetch: refetchComments 
   } = useQuery({
     queryKey: ["comments", postId],
     queryFn: () => commentService.getCommentsByPost(Number(postId)),
+    retry: 1,
   });
   
   useEffect(() => {
-    if (postData) {
+    if (postData?.data) {
       setCurrentVoteCount(postData.data.voteCount);
       
       if (postData.data.imageUrls && postData.data.imageUrls.length > 0) {
@@ -224,7 +229,27 @@ const PostPage = () => {
     );
   }
   
-  if (postError || !postData) {
+  if (postError) {
+    return (
+      <div className="max-w-4xl mx-auto py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Error loading post. The server may be unreachable or the post may not exist.
+          </AlertDescription>
+        </Alert>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => navigate("/")}
+        >
+          Go Home
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!postData?.data) {
     return (
       <div className="text-center py-8">
         <h1 className="text-2xl font-bold">Post not found</h1>
@@ -377,7 +402,7 @@ const PostPage = () => {
             <div className="flex items-center space-x-1 text-muted-foreground">
               <MessageSquare className="h-4 w-4" />
               <span className="text-sm">
-                {commentsData?.data.length || 0} {commentsData?.data.length === 1 ? "comment" : "comments"}
+                {commentsData?.data?.length || 0} {commentsData?.data?.length === 1 ? "comment" : "comments"}
               </span>
             </div>
           </div>
@@ -435,7 +460,14 @@ const PostPage = () => {
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : commentsData && commentsData.data.length > 0 ? (
+        ) : commentsError ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              Unable to load comments. Please try again later.
+            </AlertDescription>
+          </Alert>
+        ) : commentsData?.data?.length > 0 ? (
           <div className="space-y-4">
             {commentsData.data.map((comment: any) => (
               <CommentCard 
