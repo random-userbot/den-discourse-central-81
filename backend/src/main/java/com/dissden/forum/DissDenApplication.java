@@ -15,6 +15,7 @@ import com.dissden.forum.repository.DenRepository;
 import com.dissden.forum.repository.PostRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 @SpringBootApplication
 public class DissDenApplication {
@@ -48,10 +49,11 @@ public class DissDenApplication {
                 // Create welcome post
                 Post welcomePost = new Post();
                 welcomePost.setTitle("Welcome to DissDen!");
-                welcomePost.setContent("Welcome to the app! This is the first post in the general den. Feel free to start discussions.");
+                welcomePost.setContent("Welcome to DissDen, a forum where you can discuss anything and everything!\n\nHere's what you can do on DissDen:\n\n- Create and join dens (our name for communities)\n- Post text and images\n- Comment on posts\n- Upvote or downvote posts and comments\n- Customize your profile\n\nFeel free to explore the site and join the conversations. If you have any questions, just ask in this thread!\n\nEnjoy your stay at DissDen!");
                 welcomePost.setUser(admin);
                 welcomePost.setDen(generalDen);
                 welcomePost.setCreatedAt(LocalDateTime.now());
+                welcomePost.setImageUrls(new ArrayList<>());
                 postRepository.save(welcomePost);
                 
                 System.out.println("Initialized database with admin user and general den");

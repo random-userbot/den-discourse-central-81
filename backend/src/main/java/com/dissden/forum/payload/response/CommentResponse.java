@@ -18,5 +18,6 @@ public class CommentResponse {
     private Long parentCommentId;
     private LocalDateTime createdAt;
     private Integer voteCount;
+    private Integer replyCount;
     private boolean hasReplies;
 }

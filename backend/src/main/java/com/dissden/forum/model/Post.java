@@ -2,6 +2,8 @@
 package com.dissden.forum.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import jakarta.persistence.*;
@@ -39,20 +41,19 @@ public class Post {
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Comment> comments;
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<PostImage> images;
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Vote> votes;
-
+    
+    // Store images directly in the post
+    @ElementCollection
+    @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls = new ArrayList<>();
+    
+    // Vote system integrated directly into the post
+    private int upvotes = 0;
+    private int downvotes = 0;
+    
     @Transient
-    private Integer voteCount;
-
-    public Integer getVoteCount() {
-        if (votes == null) return 0;
-        return votes.stream()
-                .mapToInt(vote -> vote.isUpvote() ? 1 : -1)
-                .sum();
+    public int getVoteCount() {
+        return upvotes - downvotes;
     }
 }

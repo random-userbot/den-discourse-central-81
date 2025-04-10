@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import com.dissden.forum.model.Comment;
 import com.dissden.forum.model.Post;
 import com.dissden.forum.model.User;
-import com.dissden.forum.model.Vote;
 import com.dissden.forum.payload.request.CommentRequest;
 import com.dissden.forum.payload.request.VoteRequest;
 import com.dissden.forum.payload.response.CommentResponse;
@@ -21,7 +20,6 @@ import com.dissden.forum.payload.response.MessageResponse;
 import com.dissden.forum.repository.CommentRepository;
 import com.dissden.forum.repository.PostRepository;
 import com.dissden.forum.repository.UserRepository;
-import com.dissden.forum.repository.VoteRepository;
 import com.dissden.forum.security.services.UserDetailsImpl;
 
 import jakarta.validation.Valid;
@@ -36,7 +34,6 @@ public class CommentController {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
-    private final VoteRepository voteRepository;
     
     @GetMapping("/post/{postId}")
     public ResponseEntity<List<CommentResponse>> getCommentsByPost(@PathVariable Long postId) {
@@ -88,6 +85,10 @@ public class CommentController {
             Comment parentComment = commentRepository.findById(commentRequest.getParentCommentId())
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
             comment.setParentComment(parentComment);
+            
+            // Increment reply count on parent comment
+            parentComment.setReplyCount(parentComment.getReplyCount() + 1);
+            commentRepository.save(parentComment);
         }
         
         Comment savedComment = commentRepository.save(comment);
@@ -109,19 +110,16 @@ public class CommentController {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        Vote vote = voteRepository.findByUserAndComment(user, comment)
-                .orElse(new Vote());
+        // Update votes directly on comment
+        if (voteRequest.isUpvote()) {
+            comment.setUpvotes(comment.getUpvotes() + 1);
+        } else {
+            comment.setDownvotes(comment.getDownvotes() + 1);
+        }
         
-        vote.setUser(user);
-        vote.setComment(comment);
-        vote.setUpvote(voteRequest.isUpvote());
+        Comment updatedComment = commentRepository.save(comment);
         
-        voteRepository.save(vote);
-        
-        // Re-fetch the comment to get the updated vote count
-        comment = commentRepository.findById(id).get();
-        
-        CommentResponse commentResponse = mapCommentToResponse(comment);
+        CommentResponse commentResponse = mapCommentToResponse(updatedComment);
         
         return ResponseEntity.ok(commentResponse);
     }
@@ -141,6 +139,13 @@ public class CommentController {
         if (comment.getUser().getId().equals(user.getId()) || 
             comment.getPost().getDen().getCreator().getId().equals(user.getId())) {
             
+            // If this comment has a parent, decrement parent's reply count
+            if (comment.getParentComment() != null) {
+                Comment parentComment = comment.getParentComment();
+                parentComment.setReplyCount(Math.max(0, parentComment.getReplyCount() - 1));
+                commentRepository.save(parentComment);
+            }
+            
             commentRepository.delete(comment);
             return ResponseEntity.ok(new MessageResponse("Comment deleted successfully!"));
         } else {
@@ -159,13 +164,14 @@ public class CommentController {
         commentResponse.setPostId(comment.getPost().getId());
         commentResponse.setCreatedAt(comment.getCreatedAt());
         commentResponse.setVoteCount(comment.getVoteCount());
+        commentResponse.setReplyCount(comment.getReplyCount());
         
         if (comment.getParentComment() != null) {
             commentResponse.setParentCommentId(comment.getParentComment().getId());
         }
         
         // Set hasReplies flag
-        if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
+        if (comment.getReplyCount() > 0) {
             commentResponse.setHasReplies(true);
         }
         

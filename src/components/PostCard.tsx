@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,7 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       console.error("Error voting:", error);
       toast({
         title: "Error",
-        description: "Failed to register your vote. Please try again.",
+        description: "Failed to register your vote",
         variant: "destructive",
       });
     } finally {
@@ -106,115 +107,133 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
       console.error("Error deleting post:", error);
       toast({
         title: "Error",
-        description: "Failed to delete post. Please try again.",
+        description: "Failed to delete post",
         variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
     }
   };
-
-  const handlePrevImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (processedImageUrls && processedImageUrls.length > 0) {
-      setCurrentImageIndex((prev) => 
-        prev === 0 ? processedImageUrls.length - 1 : prev - 1
-      );
-    }
+  
+  const nextImage = () => {
+    if (processedImageUrls.length <= 1) return;
+    setCurrentImageIndex(prev => (prev + 1) % processedImageUrls.length);
   };
-
-  const handleNextImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (processedImageUrls && processedImageUrls.length > 0) {
-      setCurrentImageIndex((prev) => 
-        prev === processedImageUrls.length - 1 ? 0 : prev + 1
-      );
-    }
+  
+  const prevImage = () => {
+    if (processedImageUrls.length <= 1) return;
+    setCurrentImageIndex(prev => (prev - 1 + processedImageUrls.length) % processedImageUrls.length);
   };
-
-  const truncatedContent = post.content.length > 150 
-    ? `${post.content.substring(0, 150)}...` 
-    : post.content;
 
   return (
-    <Card className="mb-4 hover:shadow-md transition-shadow w-full">
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div className="w-full">
-          <Link to={`/post/${post.id}`} className="hover:text-den">
-            <h3 className="text-xl font-semibold">{post.title}</h3>
-          </Link>
-          <div className="flex flex-wrap items-center text-muted-foreground text-sm mt-1">
-            <span>Posted by{" "}
-              <Link to={`/profile/${post.userId}`} className="text-den hover:underline">
+    <Card className="mb-4 hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <Link to={`/post/${post.id}`} className="text-lg font-semibold hover:text-den line-clamp-2">
+              {post.title}
+            </Link>
+            <div className="flex items-center text-muted-foreground text-xs">
+              <Link to={`/profile/${post.userId}`} className="hover:underline">
                 {post.username}
               </Link>
-            </span>
-            <span className="mx-1">•</span>
-            <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
-            
-            {showDenInfo && (
-              <>
-                <span className="mx-1">•</span>
-                <Link to={`/den/${post.denId}`} className="hover:underline">
-                  <Badge variant="outline" className="text-xs">
-                    d/{post.denTitle}
-                  </Badge>
-                </Link>
-              </>
-            )}
+              <span className="mx-1">•</span>
+              <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+              {showDenInfo && (
+                <>
+                  <span className="mx-1">•</span>
+                  <Link to={`/den/${post.denId}`} className="hover:underline">
+                    {post.denTitle}
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
+          
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this post and all comments.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="pb-2">
-        <p className="text-base">{truncatedContent}</p>
-        {processedImageUrls && processedImageUrls.length > 0 && (
-          <div className="mt-4 relative">
-            <Link to={`/post/${post.id}`} className="block">
+      <CardContent>
+        <div className="text-sm mb-4">
+          <p className="line-clamp-3">{post.content}</p>
+        </div>
+        
+        {processedImageUrls.length > 0 && (
+          <div className="relative mb-4">
+            <div className="relative aspect-video bg-muted rounded-md overflow-hidden">
               <img 
                 src={processedImageUrls[currentImageIndex]} 
                 alt={`Post image ${currentImageIndex + 1}`}
-                className="rounded-md max-h-80 w-full object-cover"
-                onError={(e) => {
-                  console.log("Image failed to load:", processedImageUrls[currentImageIndex]);
-                  e.currentTarget.style.display = 'none';
-                }}
+                className="w-full h-full object-cover"
               />
-            </Link>
-            
-            {processedImageUrls.length > 1 && (
-              <>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-70 hover:opacity-100"
-                  onClick={handlePrevImage}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-70 hover:opacity-100"
-                  onClick={handleNextImage}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <span className="bg-background/70 text-foreground px-2 py-1 rounded-md text-xs">
-                    {currentImageIndex + 1} of {processedImageUrls.length}
-                  </span>
-                </div>
-              </>
-            )}
+              
+              {processedImageUrls.length > 1 && (
+                <>
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-80 h-8 w-8"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-80 h-8 w-8"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                    {processedImageUrls.map((_, index) => (
+                      <div 
+                        key={index}
+                        className={`h-2 w-2 rounded-full ${
+                          index === currentImageIndex ? 'bg-primary' : 'bg-muted-foreground/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        <div className="flex items-center space-x-2">
+      <CardFooter className="flex justify-between py-2">
+        <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <Button 
               size="icon" 
@@ -235,46 +254,18 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
             </Button>
           </div>
           
-          <Link to={`/post/${post.id}`} className="text-muted-foreground hover:text-den">
-            <Button size="sm" variant="ghost" className="space-x-1">
-              <MessageSquare className="h-4 w-4 mr-1" />
-              <span className="text-xs">{post.commentCount || 0}</span>
-            </Button>
+          <Link 
+            to={`/post/${post.id}`} 
+            className="flex items-center space-x-1 text-muted-foreground hover:text-den"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="text-sm">{post.commentCount || 0}</span>
           </Link>
         </div>
         
-        {canDelete && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="text-muted-foreground hover:text-destructive"
-                disabled={isDeleting}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the post
-                  and all associated comments.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        <Link to={`/post/${post.id}`} className="text-xs text-den hover:underline">
+          View Post
+        </Link>
       </CardFooter>
     </Card>
   );

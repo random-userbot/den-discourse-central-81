@@ -40,17 +40,16 @@ public class Comment {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
-    private Set<Vote> votes;
-
+    
+    // Vote system integrated directly into the comment
+    private int upvotes = 0;
+    private int downvotes = 0;
+    
+    @Column(name = "reply_count")
+    private int replyCount = 0;
+    
     @Transient
-    private Integer voteCount;
-
-    public Integer getVoteCount() {
-        if (votes == null) return 0;
-        return votes.stream()
-                .mapToInt(vote -> vote.isUpvote() ? 1 : -1)
-                .sum();
+    public int getVoteCount() {
+        return upvotes - downvotes;
     }
 }

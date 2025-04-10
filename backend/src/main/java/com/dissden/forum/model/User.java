@@ -29,6 +29,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column
     private String avatarUrl;
     
     @Column(columnDefinition = "TEXT")
@@ -45,7 +46,4 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Comment> comments;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<Vote> votes;
 }

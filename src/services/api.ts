@@ -1,9 +1,10 @@
 
 import axios from "axios";
 
+// Base API URL
 const API_URL = "http://localhost:8080/api";
-const PUBLIC_URL = "http://localhost:8080"; // Add this to access public resources like images
 
+// Create axios instance
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -11,7 +12,7 @@ export const api = axios.create({
   },
 });
 
-// Add a request interceptor to include auth token
+// Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -20,118 +21,104 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle 401 errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // If the error is due to an expired token, redirect to login
-    if (error.response && error.response.status === 401) {
-      // Only show the error toast if not on login/register pages
-      if (!window.location.pathname.includes("/login") && 
-          !window.location.pathname.includes("/register")) {
-        console.log("Authentication error - redirecting to login");
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Helper function to convert localhost URL to properly accessible URLs
+// Helper to get full image URL
 export const getImageUrl = (url: string) => {
-  if (!url) return '';
-  
-  // If it's already an external URL, return as is
-  if (url.startsWith('http') && !url.includes('localhost')) {
-    return url;
-  }
-  
-  // If it's a localhost URL, convert it to the correct format
-  if (url.includes('localhost:8080')) {
-    return url.replace('http://localhost:8080', PUBLIC_URL);
-  }
-  
-  // If it's just a path, prepend the base URL
-  if (url.startsWith('/uploads')) {
-    return `${PUBLIC_URL}${url}`;
-  }
-  
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads")) return `http://localhost:8080${url}`;
   return url;
 };
 
-// Auth services
+// Auth service
 export const authService = {
-  login: (username: string, password: string) => 
-    api.post("/auth/signin", { username, password }),
-  
-  register: (username: string, email: string, password: string) =>
-    api.post("/auth/signup", { username, email, password }),
+  login: (username: string, password: string) => {
+    return api.post("/auth/signin", { username, password });
+  },
+  register: (username: string, email: string, password: string) => {
+    return api.post("/auth/signup", { username, email, password });
+  },
 };
 
-// Den services
-export const denService = {
-  getAllDens: () => api.get("/dens"),
-  
-  getDenById: (id: number) => api.get(`/dens/${id}`),
-  
-  createDen: (denData: { title: string; description: string; imageUrl?: string }) =>
-    api.post("/dens", denData),
-};
-
-// Post services
-export const postService = {
-  getPostsByDen: (denId: number) => api.get(`/posts/den/${denId}`),
-  
-  getPostById: (id: number) => api.get(`/posts/${id}`),
-
-  getAllPosts: () => api.get('/posts'),
-  
-  createPost: (postData: { title: string; content: string; denId: number; imageUrls?: string[] }) =>
-    api.post("/posts", postData),
-  
-  uploadImages: (formData: FormData) =>
-    api.post(`/posts/upload-images`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
-  
-  votePost: (postId: number, upvote: boolean) =>
-    api.post(`/posts/${postId}/vote`, { upvote }),
-  
-  deletePost: (postId: number) => api.delete(`/posts/${postId}`),
-};
-
-// Comment services
-export const commentService = {
-  getCommentsByPost: (postId: number) => api.get(`/comments/post/${postId}`),
-  
-  getReplies: (commentId: number) => api.get(`/comments/${commentId}/replies`),
-  
-  createComment: (commentData: { content: string; postId: number; parentCommentId?: number }) =>
-    api.post("/comments", commentData),
-  
-  voteComment: (commentId: number, upvote: boolean) =>
-    api.post(`/comments/${commentId}/vote`, { upvote }),
-  
-  deleteComment: (commentId: number) => api.delete(`/comments/${commentId}`),
-};
-
-// User services
+// User service
 export const userService = {
-  getUserProfile: (userId: number) => api.get(`/users/${userId}`),
-  
-  getCurrentUserProfile: () => api.get("/users/me"),
-  
-  getUserHistory: (userId: number) => api.get(`/users/${userId}/history`),
+  getUserProfile: (userId: number) => {
+    return api.get(`/users/${userId}`);
+  },
+  getUserHistory: (userId: number) => {
+    return api.get(`/users/${userId}/history`);
+  },
+  updateProfile: (profileData: { bio?: string; avatarUrl?: string }) => {
+    return api.put("/users/me", profileData);
+  },
+  uploadAvatar: (formData: FormData) => {
+    return api.post("/users/avatar", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+};
 
-  updateProfile: (profileData: { bio?: string; avatarUrl?: string }) =>
-    api.put("/users/me", profileData),
-    
-  uploadAvatar: (formData: FormData) =>
-    api.post("/users/avatar", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+// Den service
+export const denService = {
+  getAllDens: () => {
+    return api.get("/dens");
+  },
+  getDenById: (denId: number) => {
+    return api.get(`/dens/${denId}`);
+  },
+  createDen: (denData: { title: string; description: string; imageUrl?: string }) => {
+    return api.post("/dens", denData);
+  },
+};
+
+// Post service
+export const postService = {
+  getAllPosts: () => {
+    return api.get("/posts");
+  },
+  getPostsByDen: (denId: number) => {
+    return api.get(`/posts/den/${denId}`);
+  },
+  getPostById: (postId: number) => {
+    return api.get(`/posts/${postId}`);
+  },
+  createPost: (postData: { title: string; content: string; denId: number; imageUrls?: string[] }) => {
+    return api.post("/posts", postData);
+  },
+  uploadImages: (formData: FormData) => {
+    return api.post("/posts/upload-images", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+  votePost: (postId: number, upvote: boolean) => {
+    return api.post(`/posts/${postId}/vote`, { upvote });
+  },
+  deletePost: (postId: number) => {
+    return api.delete(`/posts/${postId}`);
+  },
+};
+
+// Comment service
+export const commentService = {
+  getCommentsByPost: (postId: number) => {
+    return api.get(`/comments/post/${postId}`);
+  },
+  getReplies: (commentId: number) => {
+    return api.get(`/comments/${commentId}/replies`);
+  },
+  createComment: (commentData: { content: string; postId: number; parentCommentId?: number }) => {
+    return api.post("/comments", commentData);
+  },
+  voteComment: (commentId: number, upvote: boolean) => {
+    return api.post(`/comments/${commentId}/vote`, { upvote });
+  },
+  deleteComment: (commentId: number) => {
+    return api.delete(`/comments/${commentId}`);
+  },
 };

@@ -14,18 +14,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.dissden.forum.model.Den;
 import com.dissden.forum.model.Post;
-import com.dissden.forum.model.PostImage;
 import com.dissden.forum.model.User;
-import com.dissden.forum.model.Vote;
 import com.dissden.forum.payload.request.PostRequest;
 import com.dissden.forum.payload.request.VoteRequest;
 import com.dissden.forum.payload.response.MessageResponse;
 import com.dissden.forum.payload.response.PostResponse;
 import com.dissden.forum.repository.DenRepository;
-import com.dissden.forum.repository.PostImageRepository;
 import com.dissden.forum.repository.PostRepository;
 import com.dissden.forum.repository.UserRepository;
-import com.dissden.forum.repository.VoteRepository;
 import com.dissden.forum.security.services.UserDetailsImpl;
 import com.dissden.forum.service.FileStorageService;
 
@@ -41,8 +37,6 @@ public class PostController {
     private final PostRepository postRepository;
     private final DenRepository denRepository;
     private final UserRepository userRepository;
-    private final VoteRepository voteRepository;
-    private final PostImageRepository postImageRepository;
     private final FileStorageService fileStorageService;
     
     @GetMapping
@@ -99,17 +93,12 @@ public class PostController {
         post.setDen(den);
         post.setCreatedAt(LocalDateTime.now());
         
-        Post savedPost = postRepository.save(post);
-        
-        // Handle image URLs (if provided in request)
+        // Handle images directly in the post
         if (postRequest.getImageUrls() != null && !postRequest.getImageUrls().isEmpty()) {
-            for (String imageUrl : postRequest.getImageUrls()) {
-                PostImage image = new PostImage();
-                image.setImageUrl(imageUrl);
-                image.setPost(savedPost);
-                postImageRepository.save(image);
-            }
+            post.setImageUrls(postRequest.getImageUrls());
         }
+        
+        Post savedPost = postRepository.save(post);
         
         PostResponse postResponse = mapPostToResponse(savedPost);
         
@@ -146,19 +135,16 @@ public class PostController {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        Vote vote = voteRepository.findByUserAndPost(user, post)
-                .orElse(new Vote());
+        // Update votes directly on post
+        if (voteRequest.isUpvote()) {
+            post.setUpvotes(post.getUpvotes() + 1);
+        } else {
+            post.setDownvotes(post.getDownvotes() + 1);
+        }
         
-        vote.setUser(user);
-        vote.setPost(post);
-        vote.setUpvote(voteRequest.isUpvote());
+        Post updatedPost = postRepository.save(post);
         
-        voteRepository.save(vote);
-        
-        // Re-fetch the post to get the updated vote count
-        post = postRepository.findById(id).get();
-        
-        PostResponse postResponse = mapPostToResponse(post);
+        PostResponse postResponse = mapPostToResponse(updatedPost);
         
         return ResponseEntity.ok(postResponse);
     }
@@ -198,16 +184,14 @@ public class PostController {
         postResponse.setDenTitle(post.getDen().getTitle());
         postResponse.setCreatedAt(post.getCreatedAt());
         postResponse.setVoteCount(post.getVoteCount());
-        postResponse.setCommentCount(post.getComments().size());
+        postResponse.setCommentCount(post.getComments() != null ? post.getComments().size() : 0);
         
         // Set den creator ID for permission checks
         postResponse.setDenCreatorId(post.getDen().getCreator().getId());
         
-        // Map all images
-        if (post.getImages() != null) {
-            postResponse.setImageUrls(post.getImages().stream()
-                    .map(PostImage::getImageUrl)
-                    .collect(Collectors.toList()));
+        // Map images directly from post
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            postResponse.setImageUrls(post.getImageUrls());
         }
         
         return postResponse;

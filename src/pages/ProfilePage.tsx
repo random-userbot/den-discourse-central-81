@@ -1,572 +1,346 @@
-import { useState, useEffect, useContext } from "react";
-import { useParams } from "react-router-dom";
-import { userService, postService, commentService, getImageUrl } from "@/services/api";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, User as UserIcon, Trash2, Pencil, X, CheckCircle2 } from "lucide-react";
-import PostCard from "@/components/PostCard";
-import { useToast } from "@/components/ui/use-toast";
+
+import { useParams, useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { userService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Upload, User, Calendar, X } from "lucide-react";
+import { format } from "date-fns";
+import { useToast } from "@/components/ui/use-toast";
+import PostCard from "@/components/PostCard";
+import CommentCard from "@/components/CommentCard";
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
-  const [profile, setProfile] = useState<any>(null);
-  const [userHistory, setUserHistory] = useState<any>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioText, setBioText] = useState("");
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const { user: currentUser } = useContext(AuthContext);
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { user: currentUser, updateCurrentUser } = useContext(AuthContext);
-  const isOwnProfile = currentUser?.id === Number(userId);
-  const [displayedAvatarUrl, setDisplayedAvatarUrl] = useState<string | null>(null);
-
+  
+  const [activeTab, setActiveTab] = useState("posts");
+  const [editMode, setEditMode] = useState(false);
+  const [bio, setBio] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { data: userProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery({
+    queryKey: ["userProfile", userId],
+    queryFn: () => userService.getUserProfile(Number(userId)),
+  });
+  
+  const { data: userHistory, isLoading: isLoadingHistory, refetch: refetchHistory } = useQuery({
+    queryKey: ["userHistory", userId],
+    queryFn: () => userService.getUserHistory(Number(userId)),
+  });
+  
+  const isOwnProfile = currentUser && currentUser.id.toString() === userId;
+  
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setIsLoadingProfile(true);
-        const response = await userService.getUserProfile(Number(userId));
-        setProfile(response.data);
-        setBioText(response.data.bio || "");
-        
-        if (response.data.avatarUrl) {
-          setDisplayedAvatarUrl(getImageUrl(response.data.avatarUrl));
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load user profile. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-
-    const fetchUserHistory = async () => {
-      try {
-        setIsLoadingHistory(true);
-        const response = await userService.getUserHistory(Number(userId));
-        setUserHistory(response.data);
-      } catch (error) {
-        console.error("Error fetching user history:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load user history. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingHistory(false);
-      }
-    };
-
-    if (userId) {
-      fetchUserProfile();
-      fetchUserHistory();
+    if (userProfile) {
+      setBio(userProfile.data.bio || "");
     }
-  }, [userId, toast]);
-
-  const handlePostDelete = async (postId: number) => {
-    try {
-      await postService.deletePost(postId);
-      toast({
-        title: "Success",
-        description: "Post deleted successfully",
-      });
-      setUserHistory({
-        ...userHistory,
-        posts: userHistory.posts.filter((post: any) => post.id !== postId),
-      });
-    } catch (error) {
-      console.error("Error deleting post:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete post. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCommentDelete = async (commentId: number) => {
-    try {
-      await commentService.deleteComment(commentId);
-      toast({
-        title: "Success",
-        description: "Comment deleted successfully",
-      });
-      setUserHistory({
-        ...userHistory,
-        comments: userHistory.comments.filter((comment: any) => comment.id !== commentId),
-      });
-    } catch (error) {
-      console.error("Error deleting comment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete comment. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSaveBio = async () => {
-    if (!isOwnProfile) return;
-
-    try {
-      setIsUpdatingProfile(true);
-      const response = await userService.updateProfile({
-        bio: bioText
-      });
-      
-      setProfile({
-        ...profile,
-        bio: response.data.bio
-      });
-      
-      if (isOwnProfile && updateCurrentUser) {
-        updateCurrentUser({
-          ...currentUser,
-          bio: response.data.bio
-        });
-      }
-      
-      setIsEditingBio(false);
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingProfile(false);
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  }, [userProfile]);
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedAvatarFile(file);
+      setAvatarFile(file);
       
+      // Create preview
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setAvatarPreview(e.target?.result as string);
+      reader.onload = (event) => {
+        if (event.target && event.target.result) {
+          setAvatarPreview(event.target.result as string);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
-
-  const handleAvatarUpload = async () => {
-    if (!selectedAvatarFile) return;
+  
+  const clearAvatarSelection = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+  };
+  
+  const handleSaveProfile = async () => {
+    if (isSubmitting) return;
     
     try {
-      setIsUploadingAvatar(true);
-      const formData = new FormData();
-      formData.append('file', selectedAvatarFile);
+      setIsSubmitting(true);
       
-      const response = await userService.uploadAvatar(formData);
-      const avatarUrl = getImageUrl(response.data.avatarUrl);
-      
-      setProfile({
-        ...profile,
-        avatarUrl: response.data.avatarUrl
-      });
-      setDisplayedAvatarUrl(avatarUrl);
-      
-      if (isOwnProfile && updateCurrentUser) {
-        updateCurrentUser({
-          ...currentUser,
-          avatarUrl: response.data.avatarUrl
-        });
+      // Upload avatar if selected
+      let avatarUrl = userProfile?.data.avatarUrl;
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        const response = await userService.uploadAvatar(formData);
+        avatarUrl = response.data.avatarUrl;
       }
       
-      setSelectedAvatarFile(null);
-      setAvatarPreview(null);
+      // Update profile
+      await userService.updateProfile({
+        bio,
+        avatarUrl
+      });
       
       toast({
         title: "Success",
-        description: "Avatar updated successfully",
+        description: "Profile updated successfully",
       });
+      
+      setEditMode(false);
+      refetchProfile();
     } catch (error) {
-      console.error("Error uploading avatar:", error);
+      console.error("Error updating profile:", error);
       toast({
         title: "Error",
-        description: "Failed to upload avatar. Please try again.",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     } finally {
-      setIsUploadingAvatar(false);
+      setIsSubmitting(false);
     }
   };
-
+  
+  const handleDeletePost = async (postId: number) => {
+    try {
+      await refetchHistory();
+      toast({
+        title: "Success",
+        description: "Post deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error refreshing posts:", error);
+    }
+  };
+  
+  const handleDeleteComment = async () => {
+    try {
+      await refetchHistory();
+      toast({
+        title: "Success",
+        description: "Comment deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error refreshing comments:", error);
+    }
+  };
+  
   if (isLoadingProfile) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex justify-center items-center min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
-
-  if (!profile) {
+  
+  if (!userProfile) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold mb-2">User Not Found</h2>
-        <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist.</p>
+      <div className="text-center py-8">
+        <h1 className="text-2xl font-bold">User not found</h1>
+        <p className="text-muted-foreground mt-2">The user you are looking for does not exist.</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => navigate("/")}
+        >
+          Go Home
+        </Button>
       </div>
     );
   }
+  
+  const { username, avatarUrl, createdAt } = userProfile.data;
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <div className="bg-card shadow-sm rounded-lg p-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-6">
-            <div className="relative">
-              <Avatar className="h-32 w-32 border-2 border-background">
-                {displayedAvatarUrl ? (
-                  <AvatarImage 
-                    src={displayedAvatarUrl} 
-                    alt={profile.username} 
-                    onError={() => {
-                      console.error("Avatar failed to load:", displayedAvatarUrl);
-                      setDisplayedAvatarUrl(null);
-                    }}
-                  />
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <Avatar className="h-24 w-24">
+                {editMode && avatarPreview ? (
+                  <AvatarImage src={avatarPreview} alt={username} />
                 ) : (
-                  <AvatarFallback className="text-3xl">
-                    <UserIcon className="h-16 w-16 text-muted-foreground" />
-                  </AvatarFallback>
+                  <AvatarImage src={avatarUrl} alt={username} />
                 )}
+                <AvatarFallback>
+                  <User className="h-12 w-12" />
+                </AvatarFallback>
               </Avatar>
               
-              {isOwnProfile && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="outline"
-                      size="icon"
-                      className="absolute bottom-0 right-0 rounded-full bg-background shadow-md"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Update Avatar</DialogTitle>
-                      <DialogDescription>
-                        Upload a new profile picture.
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="space-y-4 py-4">
-                      {avatarPreview && (
-                        <div className="flex justify-center mb-4">
-                          <Avatar className="h-40 w-40">
-                            <AvatarImage src={avatarPreview} alt="Preview" />
-                          </Avatar>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="avatar">Select an image</Label>
-                        <Input 
-                          id="avatar" 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={handleAvatarChange}
-                        />
-                      </div>
-                    </div>
-                    
-                    <DialogFooter>
-                      <Button
-                        onClick={handleAvatarUpload}
-                        disabled={!selectedAvatarFile || isUploadingAvatar}
-                      >
-                        {isUploadingAvatar && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Upload
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              )}
+              <div className="text-center md:text-left">
+                <CardTitle className="text-2xl">{username}</CardTitle>
+                <div className="flex items-center justify-center md:justify-start text-sm text-muted-foreground gap-1 mt-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Joined {format(new Date(createdAt), 'MMM yyyy')}</span>
+                </div>
+              </div>
             </div>
             
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h1 className="text-2xl font-bold">{profile.username}</h1>
-                  {isOwnProfile && (
-                    <Badge className="ml-2 bg-den text-den-foreground">You</Badge>
+            {isOwnProfile && !editMode && (
+              <Button onClick={() => setEditMode(true)}>
+                Edit Profile
+              </Button>
+            )}
+            
+            {editMode && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setEditMode(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveProfile} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Save
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          {editMode ? (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="avatar">Profile Picture</Label>
+                <div className="mt-1 flex items-center gap-4">
+                  {avatarPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={avatarPreview} 
+                        alt="Avatar preview" 
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background shadow"
+                        onClick={clearAvatarSelection}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Label 
+                        htmlFor="avatar-upload" 
+                        className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-muted hover:bg-muted/80"
+                      >
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <Input 
+                          id="avatar-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="sr-only" 
+                          onChange={handleFileChange}
+                        />
+                      </Label>
+                    </div>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Member since {new Date(profile.createdAt).toLocaleDateString()}
-                  </p>
+                  <span className="text-sm text-muted-foreground">
+                    Click to upload a new profile picture
+                  </span>
                 </div>
-                
-                {isOwnProfile && !isEditingBio && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsEditingBio(true)}
-                    className="flex items-center gap-1"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit Bio
-                  </Button>
-                )}
               </div>
               
-              {isEditingBio ? (
-                <div className="mt-4">
-                  <Textarea 
-                    value={bioText} 
-                    onChange={(e) => setBioText(e.target.value)}
-                    placeholder="Write something about yourself..."
-                    className="min-h-[100px]"
-                  />
-                  <div className="flex justify-end mt-2 space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditingBio(false);
-                        setBioText(profile.bio || "");
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveBio}
-                      disabled={isUpdatingProfile}
-                    >
-                      {isUpdatingProfile ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                      )}
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <p className="text-sm">
-                    {profile.bio || (isOwnProfile ? "Add a bio to tell others about yourself..." : "This user hasn't added a bio yet.")}
-                  </p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell us about yourself..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  className="mt-1 h-32"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-card shadow-sm rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-6">User Activity</h2>
+          ) : (
+            <div>
+              <p className="text-sm leading-6">
+                {userProfile.data.bio || "This user hasn't written a bio yet."}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4 grid w-full grid-cols-2">
+          <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="comments">Comments</TabsTrigger>
+        </TabsList>
         
-        <Tabs defaultValue="posts">
-          <TabsList className="mb-6">
-            <TabsTrigger value="posts">Posts</TabsTrigger>
-            <TabsTrigger value="comments">Comments</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="posts">
-            {isLoadingHistory ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : userHistory?.posts && userHistory.posts.length > 0 ? (
-              <div className="space-y-4">
-                {userHistory.posts.map((post: any) => (
-                  <PostCard 
-                    key={post.id} 
-                    post={post} 
-                    showDenInfo={true}
-                    onDelete={() => handlePostDelete(post.id)}
-                    denCreatorId={post.denCreatorId}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No posts yet.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="comments">
-            {isLoadingHistory ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : userHistory?.comments && userHistory.comments.length > 0 ? (
-              <div className="space-y-4">
-                {userHistory.comments.map((comment: any) => (
-                  <div key={comment.id} className="border rounded-lg p-4">
-                    <div className="mb-2 text-xs flex justify-between items-center">
-                      <div>
-                        <span className="text-muted-foreground">Posted in </span>
-                        <a 
-                          href={`/post/${comment.postId}`} 
-                          className="font-medium hover:underline"
-                        >
-                          {comment.postTitle}
-                        </a>
-                        <span className="text-muted-foreground"> in </span>
-                        <a 
-                          href={`/den/${comment.denId}`} 
-                          className="font-medium hover:underline"
-                        >
-                          d/{comment.denTitle}
-                        </a>
-                        {comment.parentCommentId && (
-                          <span className="text-muted-foreground ml-1">(reply)</span>
-                        )}
-                      </div>
-                      
-                      {isOwnProfile && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Comment</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this comment? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleCommentDelete(comment.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                    <p className="text-sm">{comment.content}</p>
-                    <div className="mt-2 flex items-center space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 px-2 text-muted-foreground hover:text-den"
-                        onClick={async () => {
-                          try {
-                            const response = await commentService.voteComment(comment.id, true);
-                            setUserHistory({
-                              ...userHistory,
-                              comments: userHistory.comments.map((c: any) => 
-                                c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
-                              )
-                            });
-                            
-                            toast({
-                              title: "Success",
-                              description: "Comment upvoted successfully",
-                              duration: 2000,
-                            });
-                          } catch (error) {
-                            console.error("Error voting on comment:", error);
-                            toast({
-                              title: "Error",
-                              description: "Failed to upvote comment",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        ▲ Upvote
-                      </Button>
-                      <span className="text-sm font-medium">{comment.voteCount}</span>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 px-2 text-muted-foreground hover:text-den"
-                        onClick={async () => {
-                          try {
-                            const response = await commentService.voteComment(comment.id, false);
-                            setUserHistory({
-                              ...userHistory,
-                              comments: userHistory.comments.map((c: any) => 
-                                c.id === comment.id ? {...c, voteCount: response.data.voteCount} : c
-                              )
-                            });
-                            
-                            toast({
-                              title: "Success",
-                              description: "Comment downvoted successfully",
-                              duration: 2000,
-                            });
-                          } catch (error) {
-                            console.error("Error voting on comment:", error);
-                            toast({
-                              title: "Error",
-                              description: "Failed to downvote comment",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        ▼ Downvote
-                      </Button>
-                    </div>
+        <TabsContent value="posts" className="space-y-4">
+          {isLoadingHistory ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : userHistory && userHistory.data.posts.length > 0 ? (
+            userHistory.data.posts.map((post: any) => (
+              <PostCard 
+                key={post.id} 
+                post={post}
+                showDenInfo={true}
+                onDelete={() => handleDeletePost(post.id)}
+              />
+            ))
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">No posts yet</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="comments" className="space-y-4">
+          {isLoadingHistory ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : userHistory && userHistory.data.comments.length > 0 ? (
+            userHistory.data.comments.map((comment: any) => (
+              <Card key={comment.id} className="mb-4">
+                <CardHeader className="pb-2">
+                  <div className="text-sm text-muted-foreground">
+                    Comment on post:{" "}
+                    <span className="font-medium text-foreground">
+                      <a href={`/post/${comment.postId}`} className="hover:underline">
+                        {comment.postTitle || "Unknown Post"}
+                      </a>
+                    </span>
+                    {" "}in den:{" "}
+                    <span className="font-medium text-foreground">
+                      <a href={`/den/${comment.denId}`} className="hover:underline">
+                        {comment.denTitle || "Unknown Den"}
+                      </a>
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No comments yet.</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CommentCard 
+                    comment={comment}
+                    onDelete={handleDeleteComment}
+                  />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">No comments yet</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
