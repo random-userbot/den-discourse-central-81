@@ -16,7 +16,8 @@ import {
   X, 
   Trash2, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";

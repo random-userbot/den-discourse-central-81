@@ -1,151 +1,144 @@
-
-import React, { createContext, useState, ReactNode, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { createContext, useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { authService, userService } from "@/services/api";
 import { useToast } from "@/components/ui/use-toast";
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-  bio?: string;
-}
-
 interface AuthContextType {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: User | null;
-  login: (token: string, id: number, username: string, email: string) => void;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    bio?: string;
+    avatarUrl?: string;
+  } | null;
+  login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateCurrentUser: (userData: Partial<User>) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
-  isLoading: true,
   user: null,
-  login: () => {},
+  login: async () => {},
   register: async () => {},
   logout: () => {},
-  updateCurrentUser: () => {},
+  isAuthenticated: false,
+  isLoading: true,
 });
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<AuthContextType["user"]>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  
-  // Check if user is authenticated on app load
+
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const response = await userService.getCurrentUserProfile();
-          setUser({
-            id: response.data.id,
-            username: response.data.username,
-            email: "", // Email is not returned by the API for security
-            avatarUrl: response.data.avatarUrl,
-            bio: response.data.bio,
-          });
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          localStorage.removeItem("token");
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      }
+    const token = localStorage.getItem("token");
+    if (token) {
+      checkAuthStatus();
+    } else {
       setIsLoading(false);
-    };
-    
-    checkAuth();
+    }
   }, []);
-  
-  // Login function
-  const login = (token: string, id: number, username: string, email: string) => {
-    localStorage.setItem("token", token);
-    
-    setUser({
-      id,
-      username,
-      email,
-    });
-    setIsAuthenticated(true);
-    
-    toast({
-      title: "Logged in successfully",
-      description: `Welcome back, ${username}!`,
-    });
-    
-    // Redirect to home or intended page
-    const from = location.state?.from?.pathname || "/";
-    navigate(from, { replace: true });
+
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      const userData = JSON.parse(localStorage.getItem("user") || "null");
+      
+      if (userData && userData.id) {
+        // Get the latest user profile
+        const response = await userService.getUserProfile(userData.id);
+        setUser(response.data);
+      }
+    } catch (error) {
+      console.error("Error checking auth status:", error);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  // Register function
+
+  const login = async (username: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.login(username, password);
+      const { token, user: userData } = response.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser({
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        bio: userData.bio,
+        avatarUrl: userData.avatarUrl,
+      });
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome, ${username}!`,
+      });
+      navigate("/");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      toast({
+        title: "Login failed",
+        description: error.response?.data?.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (username: string, email: string, password: string) => {
     try {
+      setIsLoading(true);
       await authService.register(username, email, password);
       toast({
         title: "Registration successful",
-        description: "You can now log in with your credentials",
+        description: "Please log in with your new credentials.",
       });
       navigate("/login");
     } catch (error: any) {
-      console.error("Registration error:", error);
-      const errorMessage = error.response?.data?.message || "An error occurred during registration";
+      console.error("Registration failed:", error);
       toast({
         title: "Registration failed",
-        description: errorMessage,
+        description: error.response?.data?.message || "Failed to register user",
         variant: "destructive",
       });
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  // Logout function
+
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
-    setIsAuthenticated(false);
     toast({
-      title: "Logged out successfully",
+      title: "Logged out",
+      description: "You have been successfully logged out.",
     });
     navigate("/login");
   };
 
-  // Update current user function
-  const updateCurrentUser = (userData: Partial<User>) => {
-    if (user) {
-      setUser({
-        ...user,
-        ...userData,
-      });
-    }
+  const value = {
+    user,
+    login,
+    register,
+    logout,
+    isAuthenticated: !!user,
+    isLoading,
   };
-  
-  return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      isLoading, 
-      user, 
-      login, 
-      register, 
-      logout,
-      updateCurrentUser
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
 };

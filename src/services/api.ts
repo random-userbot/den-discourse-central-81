@@ -24,6 +24,15 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Add response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
 // Helper to get full image URL
 export const getImageUrl = (url: string) => {
   if (!url) return "";
@@ -73,6 +82,9 @@ export const denService = {
   createDen: (denData: { title: string; description: string; imageUrl?: string }) => {
     return api.post("/dens", denData);
   },
+  searchDens: (query: string) => {
+    return api.get(`/dens/search?q=${encodeURIComponent(query)}`);
+  },
 };
 
 // Post service
@@ -102,6 +114,9 @@ export const postService = {
   deletePost: (postId: number) => {
     return api.delete(`/posts/${postId}`);
   },
+  searchPosts: (query: string) => {
+    return api.get(`/posts/search?q=${encodeURIComponent(query)}`);
+  },
 };
 
 // Comment service
@@ -120,5 +135,15 @@ export const commentService = {
   },
   deleteComment: (commentId: number) => {
     return api.delete(`/comments/${commentId}`);
+  },
+  searchComments: (query: string) => {
+    return api.get(`/comments/search?q=${encodeURIComponent(query)}`);
+  },
+};
+
+// Search service
+export const searchService = {
+  globalSearch: (query: string) => {
+    return api.get(`/search?q=${encodeURIComponent(query)}`);
   },
 };
