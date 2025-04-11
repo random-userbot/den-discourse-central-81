@@ -169,10 +169,9 @@ public class UserController {
         response.setCommentCount(post.getComments().size());
         response.setDenCreatorId(post.getDen().getCreator().getId());
         
-        if (post.getImages() != null && !post.getImages().isEmpty()) {
-            List<String> imageUrls = post.getImages().stream()
-                    .map(image -> image.getImageUrl())
-                    .collect(Collectors.toList());
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            List<String> imageUrls = post.getImageUrls();
+
             response.setImageUrls(imageUrls);
         }
         
