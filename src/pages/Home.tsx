@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { denService, postService } from "@/services/api";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Search } from "lucide-react";
+import { Plus, Loader2, Search, TrendingUp, Clock, Users } from "lucide-react";
 import DenCard from "@/components/DenCard";
 import PostCard from "@/components/PostCard";
 import { useToast } from "@/components/ui/use-toast";
@@ -63,7 +62,6 @@ const Home = () => {
   }, [toast]);
 
   useEffect(() => {
-    // Update search params when search term changes
     if (searchTerm) {
       setSearchParams({ q: searchTerm });
     } else {
@@ -77,7 +75,6 @@ const Home = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // No need to do anything else since we're already updating searchParams with useEffect
   };
 
   const filteredPosts = posts.filter((post: any) => 
@@ -94,93 +91,158 @@ const Home = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Welcome to DissDen</h1>
-        <div className="flex items-center space-x-2 w-full md:w-auto">
-          <form onSubmit={handleSearch} className="relative flex-grow md:w-64">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search posts and dens..." 
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </form>
-          <Button onClick={() => navigate("/create-den")} className="bg-den hover:bg-den-accent whitespace-nowrap">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Den
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-blue-900">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center space-x-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-gradient">
+              Discover DissDen
+            </h1>
+          </div>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Explore trending discussions and join vibrant communities
+          </p>
         </div>
-      </div>
 
-      <Tabs 
-        defaultValue={activeTab} 
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="mb-8"
-      >
-        <TabsList className="mb-4">
-          <TabsTrigger value="posts">
-            Recent Posts {filteredPosts.length > 0 && searchTerm ? `(${filteredPosts.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="dens">
-            Popular Dens {filteredDens.length > 0 && searchTerm ? `(${filteredDens.length})` : ''}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="posts" className="bg-card shadow-sm rounded-lg p-6">
-          {isLoadingPosts ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredPosts.length > 0 ? (
-            <div className="space-y-6">
-              {filteredPosts.map((post: any) => (
-                <PostCard 
-                  key={post.id} 
-                  post={post} 
-                  showDenInfo={true}
-                  onDelete={() => handlePostDelete(post.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              {searchTerm ? (
-                <p className="text-muted-foreground mb-4">No posts found matching "{searchTerm}"</p>
+        {/* Search and Actions */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+          <div className="flex flex-col lg:flex-row items-center gap-4">
+            <form onSubmit={handleSearch} className="relative flex-grow">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input 
+                placeholder="Search posts, dens, and discussions..." 
+                className="pl-12 h-12 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white/50 dark:bg-gray-700/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </form>
+            <Button 
+              onClick={() => navigate("/create-den")} 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 h-12 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 whitespace-nowrap"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Create Den
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Tabs */}
+        <Tabs 
+          defaultValue={activeTab} 
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-2 lg:w-96 mx-auto bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-1 shadow-lg border border-white/20">
+            <TabsTrigger 
+              value="posts" 
+              className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white font-medium"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Recent Posts {filteredPosts.length > 0 && searchTerm ? `(${filteredPosts.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="dens" 
+              className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white font-medium"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Communities {filteredDens.length > 0 && searchTerm ? `(${filteredDens.length})` : ''}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="posts">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-white/20">
+              {isLoadingPosts ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">Loading amazing posts...</p>
+                  </div>
+                </div>
+              ) : filteredPosts.length > 0 ? (
+                <div className="space-y-6">
+                  {filteredPosts.map((post: any) => (
+                    <div key={post.id} className="transform hover:scale-[1.01] transition-transform duration-300">
+                      <PostCard 
+                        post={post} 
+                        showDenInfo={true}
+                        onDelete={() => handlePostDelete(post.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p className="text-muted-foreground mb-4">No posts available yet.</p>
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Search className="w-10 h-10 text-blue-500" />
+                  </div>
+                  {searchTerm ? (
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No posts found</h3>
+                      <p className="text-gray-600 dark:text-gray-400">No posts match your search for "{searchTerm}"</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No posts yet</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">Be the first to start a conversation!</p>
+                      <Button onClick={() => navigate("/create-den")} variant="outline" className="rounded-xl">
+                        Create the first post
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="dens" className="bg-card shadow-sm rounded-lg p-6">
-          {isLoadingDens ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredDens.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredDens.map((den: any) => (
-                <DenCard key={den.id} den={den} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              {searchTerm ? (
-                <p className="text-muted-foreground mb-4">No dens found matching "{searchTerm}"</p>
+          </TabsContent>
+          
+          <TabsContent value="dens">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-white/20">
+              {isLoadingDens ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-purple-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">Finding great communities...</p>
+                  </div>
+                </div>
+              ) : filteredDens.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredDens.map((den: any) => (
+                    <div key={den.id} className="transform hover:scale-105 transition-transform duration-300">
+                      <DenCard den={den} />
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p className="text-muted-foreground mb-4">No dens available yet.</p>
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Users className="w-10 h-10 text-purple-500" />
+                  </div>
+                  {searchTerm ? (
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No communities found</h3>
+                      <p className="text-gray-600 dark:text-gray-400">No communities match your search for "{searchTerm}"</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No communities yet</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">Create the first community and start building connections!</p>
+                      <Link to="/create-den">
+                        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl">
+                          Create the first Den
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               )}
-              <Link to="/create-den">
-                <Button variant="outline">Create the first Den</Button>
-              </Link>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
