@@ -37,10 +37,11 @@ interface PostCardProps {
     userVote?: "upvote" | "downvote" | null;
   };
   denCreatorId?: number;
+  showDenInfo?: boolean;
   onDelete?: () => void;
 }
 
-const PostCard = ({ post, denCreatorId, onDelete }: PostCardProps) => {
+const PostCard = ({ post, denCreatorId, showDenInfo = false, onDelete }: PostCardProps) => {
   const [currentVote, setCurrentVote] = useState(post.userVote);
   const [upvotes, setUpvotes] = useState(post.upvotes);
   const [downvotes, setDownvotes] = useState(post.downvotes);
@@ -60,7 +61,7 @@ const PostCard = ({ post, denCreatorId, onDelete }: PostCardProps) => {
     }
 
     try {
-      await postService.votePost(post.id, { voteType });
+      await postService.votePost(post.id, voteType);
       
       if (currentVote === voteType) {
         setCurrentVote(null);
@@ -136,15 +137,17 @@ const PostCard = ({ post, denCreatorId, onDelete }: PostCardProps) => {
                 <User className="w-4 h-4" />
                 <span className="font-medium">{post.creatorUsername}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span>in</span>
-                <Link 
-                  to={`/den/${post.denId}`}
-                  className="font-medium text-gray-900 hover:text-gray-700 transition-colors"
-                >
-                  d/{post.denTitle}
-                </Link>
-              </div>
+              {showDenInfo && (
+                <div className="flex items-center gap-1">
+                  <span>in</span>
+                  <Link 
+                    to={`/den/${post.denId}`}
+                    className="font-medium text-gray-900 hover:text-gray-700 transition-colors"
+                  >
+                    d/{post.denTitle}
+                  </Link>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
