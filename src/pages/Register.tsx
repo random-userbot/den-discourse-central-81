@@ -1,29 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, UserPlus, Mail, Lock, User } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import registerImg from "@/assets/discussion.svg";
 import { authService } from "@/services/api";
 import { useToast } from "@/components/ui/use-toast";
-
-import {
-  Button,
-} from "@/components/ui/button";
-
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const registerSchema = z
   .object({
@@ -65,11 +54,9 @@ const Register = () => {
     },
   });
 
-  // Extract password value for live warnings
   const password = form.watch("password");
-
-  // Generate live warnings based on password input
   const [passwordWarnings, setPasswordWarnings] = useState<string[]>([]);
+  
   useEffect(() => {
     const warnings: string[] = [];
 
@@ -90,7 +77,6 @@ const Register = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      // Call your API with username as fullName here (adjust if your backend expects username instead)
       await authService.register(data.fullName, data.email, data.password);
 
       toast({
@@ -109,160 +95,199 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center px-4 bg-gradient-to-r from-blue-50 to-purple-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Illustration */}
-      <motion.div
-        initial={{ x: -50, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="hidden md:block w-full md:w-1/2 p-6"
-      >
-        <img
-          src={registerImg}
-          alt="Join Discussion"
-          className="w-full max-w-md mx-auto"
-        />
-        <p className="text-center text-muted-foreground mt-4 text-lg">
-          Join conversations in tech, science, art, and more!
-        </p>
-      </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-blue-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-10 animate-float"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-gradient-to-tr from-pink-400 to-purple-500 rounded-full opacity-10 animate-float" style={{animationDelay: '3s'}}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full opacity-5 animate-float" style={{animationDelay: '1.5s'}}></div>
+      </div>
 
-      {/* Form */}
-      <motion.div
-        initial={{ x: 50, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="bg-white dark:bg-card p-8 rounded-2xl shadow-lg w-full md:w-1/2 max-w-md"
-      >
-        <h2 className="text-3xl font-bold text-center mb-6 text-primary dark:text-white">
-          Create your account
-        </h2>
+      <div className="relative z-10 w-full max-w-md">
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg animate-glow">
+              <UserPlus className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-gradient">Join DissDen</h1>
+          </div>
+          <p className="text-lg text-gray-600 dark:text-gray-300">
+            Create your account and start exploring
+          </p>
+        </motion.div>
 
         {error && (
-          <p className="mb-4 text-red-600 text-center font-medium">{error}</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6"
+          >
+            <Alert variant="destructive" className="bg-red-50 border-red-200 shadow-lg">
+              <AlertDescription className="text-red-800 font-medium">{error}</AlertDescription>
+            </Alert>
+          </motion.div>
         )}
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter your full name"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+        {/* Form Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/30 dark:border-gray-700/30"
+        >
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-200 font-semibold">Full Name</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          placeholder="Enter your full name"
+                          className="pl-12 h-12 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-purple-500/20 bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm transition-all duration-300"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-200 font-semibold">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          type="email"
+                          placeholder="Enter your email"
+                          className="pl-12 h-12 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-purple-500/20 bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm transition-all duration-300"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-200 font-semibold">Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create a password"
+                          className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-purple-500/20 bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm transition-all duration-300"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                          tabIndex={-1}
+                          disabled={isSubmitting}
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {passwordWarnings.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="bg-yellow-50 border border-yellow-200 rounded-xl p-3"
+                >
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    {passwordWarnings.map((msg, idx) => (
+                      <li key={idx} className="flex items-center">
+                        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-2"></span>
+                        {msg}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
               )}
-            />
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-200 font-semibold">Confirm Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          type="password"
+                          placeholder="Confirm your password"
+                          className="pl-12 h-12 rounded-xl border-gray-200 focus:border-purple-500 focus:ring-purple-500/20 bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm transition-all duration-300"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Create a password"
-                        {...field}
-                        disabled={isSubmitting}
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-gray-500 dark:text-gray-300"
-                        tabIndex={-1}
-                        disabled={isSubmitting}
-                      >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 animate-glow"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <UserPlus className="mr-2 h-5 w-5" />
+                )}
+                {isSubmitting ? "Creating Account..." : "Create Account"}
+              </Button>
+            </form>
+          </Form>
 
-            {/* Live password warnings */}
-            {passwordWarnings.length > 0 && (
-              <ul className="text-sm text-red-500 space-y-1 -mt-2 ml-1">
-                {passwordWarnings.map((msg, idx) => (
-                  <li key={idx}>• {msg}</li>
-                ))}
-              </ul>
-            )}
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Confirm your password"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full flex justify-center items-center"
-              disabled={isSubmitting}
-            >
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin text-white" />
-              )}
-              Register
-            </Button>
-          </form>
-        </Form>
-
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-blue-600 underline hover:text-blue-700"
-          >
-            Login
-          </Link>
-        </p>
-      </motion.div>
+          <div className="mt-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Already have an account?{" "}
+              <Link 
+                to="/login" 
+                className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold hover:underline transition-colors"
+              >
+                Sign in here
+              </Link>
+            </p>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
