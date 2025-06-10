@@ -18,6 +18,7 @@ import { Loader2 } from "lucide-react";
 import { authService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import loginIllustration from "@/assets/Computer login-amico.svg"; // ⬅️ Import the SVG
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -46,14 +47,14 @@ const Login = () => {
       setError(null);
       setIsSubmitting(true);
       const response = await authService.login(data.username, data.password);
-      
+
       login(data.username, data.password);
-      
+
       toast({
         title: "Success",
         description: "You have been logged in successfully",
       });
-      
+
       navigate("/");
     } catch (err: any) {
       setError(
@@ -65,21 +66,32 @@ const Login = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold">Sign In to DissDen</h1>
-        <p className="text-muted-foreground mt-2">
-          Enter your credentials to access your account
-        </p>
+    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center px-4 bg-gradient-to-r from-blue-50 to-purple-100 dark:from-gray-900 dark:to-gray-800">
+      
+      {/* Illustration Section */}
+      <div className="hidden md:flex w-full md:w-1/2 p-8 justify-center">
+        <img
+          src={loginIllustration}
+          alt="Login Illustration"
+          className="max-w-md w-full"
+        />
       </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {/* Login Form Section */}
+      <div className="w-full md:w-1/2 max-w-md bg-white dark:bg-card p-6 rounded-2xl shadow-lg">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-primary dark:text-white">Sign In to DissDen</h1>
+          <p className="text-muted-foreground mt-2">
+            Enter your credentials to access your account
+          </p>
+        </div>
 
-      <div className="bg-card shadow-sm rounded-lg p-6">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -103,10 +115,10 @@ const Login = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="Enter your password" 
-                      {...field} 
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
