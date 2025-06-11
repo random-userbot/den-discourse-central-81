@@ -41,7 +41,7 @@ const Index = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 0.6 }}
           onClick={handleExplore}
-          className="mt-6 px-6 py-2 bg-primary text-white font-semibold rounded-xl shadow-md bg-blue-800 transition"
+          className="mt-6 px-6 py-2  rounded-xl shadow-md bg-blue-800 transition"
         >
           Explore Now
         </motion.button>
