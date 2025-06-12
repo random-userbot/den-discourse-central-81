@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,8 @@ import ProfilePage from "./pages/ProfilePage";
 import CreateDen from "./pages/CreateDen";
 import CreatePost from "./pages/CreatePost";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 
 // Components
 import Layout from "./components/Layout";
@@ -53,6 +54,9 @@ const App = () => (
                   <CreatePost />
                 </ProtectedRoute>
               } />
+
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

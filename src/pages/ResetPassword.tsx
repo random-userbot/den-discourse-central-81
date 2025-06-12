@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authService } from "@/services/api";
+import { Eye, EyeOff } from "lucide-react";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -17,6 +18,8 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const query = useQuery();
   const token = query.get("token") || "";
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,23 +48,43 @@ const ResetPassword = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium">New Password</label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-              required
-            />
+            <div className="relative">
+              <Input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setShowNewPassword(v => !v)}
+                tabIndex={-1}
+              >
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium">Confirm New Password</label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-              required
-            />
+            <div className="relative">
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setShowConfirmPassword(v => !v)}
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           {error && <div className="text-red-500 text-xs">{error}</div>}
           {success && <div className="text-green-600 text-xs">{success}</div>}

@@ -139,6 +139,10 @@ const Login = () => {
               )}
             />
 
+            <div className="text-right mt-1 mb-2">
+              <Link to="/forgot-password" className="text-den hover:underline text-sm">Forgot Password?</Link>
+            </div>
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In

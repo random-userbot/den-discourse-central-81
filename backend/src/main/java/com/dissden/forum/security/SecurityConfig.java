@@ -1,4 +1,3 @@
-
 package com.dissden.forum.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +61,8 @@ public class SecurityConfig {
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> 
-                auth.requestMatchers("/api/auth/**").permitAll()
+                auth.requestMatchers("/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                    .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/uploads/**").permitAll()  // Allow anyone to access uploaded files
                     .requestMatchers(HttpMethod.GET, "/api/dens").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/dens/**").permitAll()
