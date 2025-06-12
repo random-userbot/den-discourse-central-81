@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService, userService } from "@/services/api";
@@ -89,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: `Welcome, ${responseUsername}!`,
       });
       
-      navigate("/");
+      navigate("/home");
     } catch (error: any) {
       console.error("Login failed:", error);
       toast({

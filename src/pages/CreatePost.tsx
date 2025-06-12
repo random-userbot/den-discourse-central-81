@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { denService, postService } from "@/services/api";
@@ -49,7 +48,7 @@ const CreatePost = () => {
           variant: "destructive",
         });
         // Redirect to home after a brief delay
-        setTimeout(() => navigate("/"), 2000);
+        setTimeout(() => navigate("/home"), 2000);
       } finally {
         setIsLoadingDen(false);
       }

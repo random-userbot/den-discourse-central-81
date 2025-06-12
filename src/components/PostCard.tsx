@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,9 +37,10 @@ interface PostCardProps {
   denCreatorId?: number;
   onDelete?: () => void;
   showDenInfo?: boolean;
+  showCommentsText?: boolean;
 }
 
-const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCardProps) => {
+const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false, showCommentsText = false }: PostCardProps) => {
   const { user } = useContext(AuthContext);
   const { toast } = useToast();
   const [currentVoteCount, setCurrentVoteCount] = useState(post.voteCount);
@@ -259,7 +259,7 @@ const PostCard = ({ post, denCreatorId, onDelete, showDenInfo = false }: PostCar
             className="flex items-center space-x-1 text-muted-foreground hover:text-den"
           >
             <MessageSquare className="h-4 w-4" />
-            <span className="text-sm">{post.commentCount || 0}</span>
+            <span className="text-sm">{showCommentsText ? 'Comments' : (typeof post.commentCount === 'number' ? post.commentCount : '–')}</span>
           </Link>
         </div>
         

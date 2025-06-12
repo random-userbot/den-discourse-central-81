@@ -57,7 +57,7 @@ const Login = () => {
         description: "You have been logged in successfully",
       });
 
-      navigate("/");
+      navigate("/home");
     } catch (err: any) {
       setError(
         err.response?.data?.message || "Login failed. Please check your credentials."

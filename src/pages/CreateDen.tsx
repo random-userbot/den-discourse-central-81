@@ -1,4 +1,3 @@
-
 import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -188,7 +187,7 @@ const CreateDen = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/home")}
               >
                 Cancel
               </Button>

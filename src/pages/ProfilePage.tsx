@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,6 +29,8 @@ const ProfilePage = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localPosts, setLocalPosts] = useState<any[]>([]);
+  const [localComments, setLocalComments] = useState<any[]>([]);
   
   const { 
     data: userProfile, 
@@ -60,6 +61,13 @@ const ProfilePage = () => {
       setBio(userProfile.data.bio || "");
     }
   }, [userProfile]);
+  
+  useEffect(() => {
+    if (userHistory?.data) {
+      setLocalPosts(userHistory.data.posts || []);
+      setLocalComments(userHistory.data.comments || []);
+    }
+  }, [userHistory]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -122,8 +130,9 @@ const ProfilePage = () => {
     }
   };
   
-  const handleDeletePost = async () => {
+  const handleDeletePost = async (postId: number) => {
     try {
+      setLocalPosts((prev) => prev.filter((post) => post.id !== postId));
       await refetchHistory();
       toast({
         title: "Success",
@@ -139,8 +148,9 @@ const ProfilePage = () => {
     }
   };
   
-  const handleDeleteComment = async () => {
+  const handleDeleteComment = async (commentId: number) => {
     try {
+      setLocalComments((prev) => prev.filter((comment) => comment.id !== commentId));
       await refetchHistory();
       toast({
         title: "Success",
@@ -176,7 +186,7 @@ const ProfilePage = () => {
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           Go Home
         </Button>
@@ -192,7 +202,7 @@ const ProfilePage = () => {
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           Go Home
         </Button>
@@ -332,13 +342,14 @@ const ProfilePage = () => {
                 Unable to load posts. Please try again later.
               </AlertDescription>
             </Alert>
-          ) : userHistory?.data?.posts?.length > 0 ? (
-            userHistory.data.posts.map((post: any) => (
+          ) : localPosts.length > 0 ? (
+            localPosts.map((post: any) => (
               <PostCard 
                 key={post.id} 
                 post={post}
                 showDenInfo={true}
-                onDelete={() => handleDeletePost()}
+                onDelete={() => handleDeletePost(post.id)}
+                showCommentsText={true}
               />
             ))
           ) : (
@@ -362,8 +373,8 @@ const ProfilePage = () => {
                 Unable to load comments. Please try again later.
               </AlertDescription>
             </Alert>
-          ) : userHistory?.data?.comments?.length > 0 ? (
-            userHistory.data.comments.map((comment: any) => (
+          ) : localComments.length > 0 ? (
+            localComments.map((comment: any) => (
               <Card key={comment.id} className="mb-4">
                 <CardHeader className="pb-2">
                   <div className="text-sm text-muted-foreground">
@@ -384,7 +395,7 @@ const ProfilePage = () => {
                 <CardContent className="pt-0">
                   <CommentCard 
                     comment={comment}
-                    onDelete={handleDeleteComment}
+                    onDelete={() => handleDeleteComment(comment.id)}
                   />
                 </CardContent>
               </Card>

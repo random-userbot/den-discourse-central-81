@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -241,7 +240,7 @@ const PostPage = () => {
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           Go Home
         </Button>
@@ -257,7 +256,7 @@ const PostPage = () => {
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           Go Home
         </Button>
