@@ -1,4 +1,3 @@
-
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ const Navbar = () => {
   
   const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate("/home");
   };
 
   return (
@@ -29,7 +28,7 @@ const Navbar = () => {
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link 
-            to="/" 
+            to="/home" 
             className="font-bold text-xl flex items-center"
           >
             <span className="text-den">Diss</span><span>Den</span>
@@ -46,7 +45,7 @@ const Navbar = () => {
 
         {/* Desktop navigation */}
         <nav className={`hidden md:flex items-center gap-4`}>
-          <Link to="/" className="flex items-center gap-1 text-sm font-medium">
+          <Link to="/home" className="flex items-center gap-1 text-sm font-medium">
             <Home className="h-4 w-4" />
             <span>Home</span>
           </Link>
@@ -103,7 +102,7 @@ const Navbar = () => {
           <div className="absolute top-14 left-0 w-full bg-background border-b md:hidden p-4">
             <div className="flex flex-col space-y-4">
               <Link 
-                to="/" 
+                to="/home" 
                 className="flex items-center gap-1 text-sm font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >

@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment and local config files
+.env
+backend/src/main/resources/application.properties

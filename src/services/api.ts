@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 // Base API URL - Update to use the current origin instead of hardcoded localhost
@@ -58,6 +57,12 @@ export const authService = {
   },
   register: (username: string, email: string, password: string) => {
     return api.post("/auth/signup", { username, email, password });
+  },
+  forgotPassword: (username: string, email: string) => {
+    return api.post("/auth/forgot-password", { username, email });
+  },
+  resetPassword: (token: string, newPassword: string) => {
+    return api.post("/auth/reset-password", { token, newPassword });
   },
 };
 

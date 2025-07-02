@@ -1,4 +1,3 @@
-
 package com.dissden.forum.model;
 
 import java.time.LocalDateTime;
@@ -28,6 +27,12 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
 
     @Column
     private String avatarUrl;

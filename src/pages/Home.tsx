@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { denService, postService } from "@/services/api";
@@ -142,6 +141,7 @@ const Home = () => {
                   post={post} 
                   showDenInfo={true}
                   onDelete={() => handlePostDelete(post.id)}
+                  showCommentsText={true}
                 />
               ))}
             </div>

@@ -1,4 +1,3 @@
-
 import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -100,20 +99,7 @@ const CreateDen = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link to="/">
-              <Home className="h-4 w-4" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink className="font-semibold">Create Den</BreadcrumbLink>
-        </BreadcrumbItem>
-      </Breadcrumb>
-
+      
       <div className="bg-card shadow-sm rounded-lg p-6">
         <h1 className="text-2xl font-bold mb-6">Create a New Den</h1>
         
@@ -188,7 +174,7 @@ const CreateDen = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/home")}
               >
                 Cancel
               </Button>

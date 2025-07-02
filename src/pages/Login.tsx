@@ -19,11 +19,13 @@ import { authService } from "@/services/api";
 import { AuthContext } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import loginIllustration from "@/assets/Computer login-amico.svg"; // ⬅️ Import the SVG
+import { Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
+
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -33,7 +35,7 @@ const Login = () => {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const { toast } = useToast();
-
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -55,7 +57,7 @@ const Login = () => {
         description: "You have been logged in successfully",
       });
 
-      navigate("/");
+      navigate("/home");
     } catch (err: any) {
       setError(
         err.response?.data?.message || "Login failed. Please check your credentials."
@@ -115,16 +117,31 @@ const Login = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Enter your password"
-                      {...field}
-                    />
+                    <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          {...field}
+                          className="pr-10"
+                        />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <div className="text-right mt-1 mb-2">
+              <Link to="/forgot-password" className="text-den hover:underline text-sm">Forgot Password?</Link>
+            </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useContext } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { denService, postService } from "@/services/api";
@@ -86,25 +85,11 @@ const DenPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-card shadow-sm rounded-lg p-4 mb-6">
-        <Breadcrumb>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/">
-                <Home className="h-4 w-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink className="font-semibold">d/{den.title}</BreadcrumbLink>
-          </BreadcrumbItem>
-        </Breadcrumb>
-      </div>
+     
 
       <div className="bg-card shadow-sm rounded-lg overflow-hidden mb-8">
         {den.imageUrl && (
-          <div className="w-full h-48 overflow-hidden">
+          <div className="w-full h-72 overflow-hidden">
             <img 
               src={den.imageUrl}
               alt={den.title}
@@ -147,6 +132,7 @@ const DenPage = () => {
                     post={post}
                     denCreatorId={den.creatorId}
                     onDelete={() => handleDeletePost(post.id)}
+                    showCommentsText={true}
                   />
                 </div>
               ))}
